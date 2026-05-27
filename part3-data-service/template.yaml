@@ -1,0 +1,173 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: FIT5225 Team102 Part3 Data Service (SAM)
+
+Parameters:
+  StageName:
+    Type: String
+    Default: prod
+  Region:
+    Type: String
+    Default: ap-southeast-2
+  BucketName:
+    Type: String
+    Default: fit5225-team102-aussie-ecolens
+  MediaTableName:
+    Type: String
+    Default: fit5225-team102-media-files
+  TagIndexTableName:
+    Type: String
+    Default: fit5225-team102-tag-index
+  ThumbLookupTableName:
+    Type: String
+    Default: fit5225-team102-thumb-lookup
+  TagSubscriptionTableName:
+    Type: String
+    Default: fit5225-team102-tag-subscriptions
+  UserPoolId:
+    Type: String
+    Default: ap-southeast-2_NgrJbyS3q
+
+Globals:
+  Function:
+    Runtime: python3.11
+    Timeout: 30
+    MemorySize: 256
+    CodeUri: src/
+    Environment:
+      Variables:
+        MEDIA_TABLE: !Ref MediaTableName
+        TAG_INDEX_TABLE: !Ref TagIndexTableName
+        THUMB_LOOKUP_TABLE: !Ref ThumbLookupTableName
+        TAG_SUBSCRIPTION_TABLE: !Ref TagSubscriptionTableName
+        BUCKET_NAME: !Ref BucketName
+
+Resources:
+  DataApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref StageName
+      Cors:
+        AllowMethods: "'GET,POST,OPTIONS'"
+        AllowHeaders: "'Content-Type,Authorization'"
+        AllowOrigin: "'*'"
+      Auth:
+        DefaultAuthorizer: CognitoAuthorizer
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn: !Sub arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPoolId}
+
+  UpsertMediaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/upsert_media.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MediaTableName
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TagIndexTableName
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ThumbLookupTableName
+      Events:
+        UpsertMediaApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DataApi
+            Path: /data/media
+            Method: post
+
+  QueryTagsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/query_tags.handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref MediaTableName
+        - DynamoDBReadPolicy:
+            TableName: !Ref TagIndexTableName
+      Events:
+        QueryTagsApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DataApi
+            Path: /query/tags
+            Method: post
+
+  QuerySimilarFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/query_similar.handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref MediaTableName
+        - DynamoDBReadPolicy:
+            TableName: !Ref TagIndexTableName
+      Events:
+        QuerySimilarApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DataApi
+            Path: /query/similar
+            Method: post
+
+  ThumbnailLookupFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/thumbnail_lookup.handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref ThumbLookupTableName
+      Events:
+        ThumbnailLookupApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DataApi
+            Path: /query/thumbnail
+            Method: get
+
+  BulkTagFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/bulk_tag.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MediaTableName
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TagIndexTableName
+      Events:
+        BulkTagApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DataApi
+            Path: /tags/bulk
+            Method: post
+
+  DeleteFilesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/delete_files.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MediaTableName
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TagIndexTableName
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ThumbLookupTableName
+        - S3CrudPolicy:
+            BucketName: !Ref BucketName
+      Events:
+        DeleteFilesApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DataApi
+            Path: /files/delete
+            Method: post
+
+Outputs:
+  ApiBaseUrl:
+    Description: Base URL of Part3 Data API
+    Value: !Sub https://${DataApi}.execute-api.${AWS::Region}.amazonaws.com/${StageName}
+
+  UpsertMediaPath:
+    Description: Upsert media endpoint
+    Value: !Sub https://${DataApi}.execute-api.${AWS::Region}.amazonaws.com/${StageName}/data/media
