@@ -1,0 +1,16 @@
+version = 0.1
+
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name       = "fit5225-team102-part4-notifications"
+region           = "ap-southeast-2"
+confirm_changeset = true
+capabilities     = "CAPABILITY_IAM"
+parameter_overrides = [
+    "CognitoUserPoolId=ap-southeast-2_NgrJbyS3q",
+    "CognitoClientId=5k2a9ipn97p3efqfev1gtl07r9",
+    "MediaFilesStreamArn="
+]
+# After enabling DynamoDB Streams on the media-files table, update MediaFilesStreamArn above
+# with the stream ARN from the AWS Console, then run: sam deploy

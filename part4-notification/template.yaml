@@ -1,0 +1,155 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  AussieEcoLens Part 4 - Notification Service
+  Provides subscribe/unsubscribe/list APIs and a DynamoDB Stream-triggered notifier Lambda.
+
+Parameters:
+  CognitoUserPoolId:
+    Type: String
+    Default: ap-southeast-2_NgrJbyS3q
+    Description: Cognito User Pool ID (from Part 1)
+
+  CognitoClientId:
+    Type: String
+    Default: 5k2a9ipn97p3efqfev1gtl07r9
+    Description: Cognito App Client ID (from Part 1)
+
+  MediaFilesStreamArn:
+    Type: String
+    Default: ""
+    Description: >
+      DynamoDB Stream ARN of the Part 3 media-files table.
+      Leave empty to deploy without the stream trigger.
+      Enable the stream in the AWS Console (media-files table → Exports and streams
+      → Turn on DynamoDB Streams, view type = New and old images), then re-deploy
+      with this parameter filled in.
+
+Conditions:
+  HasStreamArn: !Not [!Equals [!Ref MediaFilesStreamArn, ""]]
+
+Globals:
+  Function:
+    Runtime: python3.11
+    Timeout: 30
+    Environment:
+      Variables:
+        SUBSCRIPTIONS_TABLE: fit5225-team102-tag-subscriptions
+        SNS_TOPIC_PREFIX: aussie-ecolens-tag-
+
+Resources:
+
+  # ── API Gateway with Cognito Authorizer ────────────────────────────────────
+  NotificationApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: prod
+      Auth:
+        DefaultAuthorizer: CognitoAuth
+        AddDefaultAuthorizerToCorsPreflight: false
+        Authorizers:
+          CognitoAuth:
+            UserPoolArn: !Sub arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${CognitoUserPoolId}
+      Cors:
+        AllowMethods: "'GET,POST,DELETE,OPTIONS'"
+        AllowHeaders: "'Content-Type,Authorization'"
+        AllowOrigin: "'*'"
+
+  # ── Subscribe Lambda ───────────────────────────────────────────────────────
+  SubscribeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: subscribe/
+      Handler: app.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: fit5225-team102-tag-subscriptions
+        - Statement:
+            Effect: Allow
+            Action:
+              - sns:CreateTopic
+              - sns:Subscribe
+            Resource: "*"
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref NotificationApi
+            Path: /notifications/subscribe
+            Method: POST
+
+  # ── Unsubscribe Lambda ─────────────────────────────────────────────────────
+  UnsubscribeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: unsubscribe/
+      Handler: app.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: fit5225-team102-tag-subscriptions
+        - Statement:
+            Effect: Allow
+            Action:
+              - sns:Unsubscribe
+            Resource: "*"
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref NotificationApi
+            Path: /notifications/unsubscribe
+            Method: DELETE
+
+  # ── List Subscriptions Lambda ──────────────────────────────────────────────
+  ListSubscriptionsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: list_subscriptions/
+      Handler: app.handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: fit5225-team102-tag-subscriptions
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref NotificationApi
+            Path: /notifications/list
+            Method: GET
+
+  # ── Notifier Lambda (DynamoDB Stream trigger) ──────────────────────────────
+  NotifierFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: notifier/
+      Handler: app.handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: fit5225-team102-tag-subscriptions
+        - Statement:
+            Effect: Allow
+            Action:
+              - sns:Publish
+              - dynamodb:GetShardIterator
+              - dynamodb:DescribeStream
+              - dynamodb:GetRecords
+              - dynamodb:ListStreams
+            Resource: "*"
+
+  # Only created when MediaFilesStreamArn is provided
+  NotifierEventSource:
+    Type: AWS::Lambda::EventSourceMapping
+    Condition: HasStreamArn
+    Properties:
+      EventSourceArn: !Ref MediaFilesStreamArn
+      FunctionName: !GetAtt NotifierFunction.Arn
+      StartingPosition: TRIM_HORIZON
+      BatchSize: 10
+      FilterCriteria:
+        Filters:
+          - Pattern: '{"eventName": ["INSERT", "MODIFY"]}'
+
+Outputs:
+  ApiUrl:
+    Description: Part 4 Notification API base URL — paste into CONFIG.part4ApiBase
+    Value: !Sub https://${NotificationApi}.execute-api.${AWS::Region}.amazonaws.com/prod
