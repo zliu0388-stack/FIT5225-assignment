@@ -1,0 +1,15 @@
+version = 0.1
+
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "fit5225-team102-part4-query-by-file"
+region     = "ap-southeast-2"
+confirm_changeset = true
+capabilities      = "CAPABILITY_IAM"
+parameter_overrides = [
+    "CognitoUserPoolId=ap-southeast-2_NgrJbyS3q",
+    "Part3ApiBase=https://5jo3ferouh.execute-api.ap-southeast-2.amazonaws.com/prod"
+]
+# NOTE: image_repositories will be added automatically by SAM after the first
+# guided deploy creates the ECR repository. Run: sam deploy --guided

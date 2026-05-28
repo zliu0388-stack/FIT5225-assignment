@@ -1,0 +1,68 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  AussieEcoLens Part 4 - Query by Uploaded File
+  Runs ephemeral YOLO inference on an uploaded image/video and returns
+  similar media from the database via Part 3's /query/similar API.
+
+Parameters:
+  CognitoUserPoolId:
+    Type: String
+    Default: ap-southeast-2_NgrJbyS3q
+
+  Part3ApiBase:
+    Type: String
+    Default: https://5jo3ferouh.execute-api.ap-southeast-2.amazonaws.com/prod
+    Description: Part 3 API base URL (used to call /query/similar)
+
+Resources:
+
+  # ── API Gateway ────────────────────────────────────────────────────────────
+  QueryByFileApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: prod
+      # Binary media types let API Gateway pass the file body as base64
+      BinaryMediaTypes:
+        - multipart/form-data
+        - "*/*"
+      Auth:
+        DefaultAuthorizer: CognitoAuth
+        AddDefaultAuthorizerToCorsPreflight: false
+        Authorizers:
+          CognitoAuth:
+            UserPoolArn: !Sub arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${CognitoUserPoolId}
+      Cors:
+        AllowMethods: "'POST,OPTIONS'"
+        AllowHeaders: "'Content-Type,Authorization'"
+        AllowOrigin: "'*'"
+
+  # ── Lambda (container image — needed to fit YOLO + PyTorch) ───────────────
+  QueryByFileFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      DockerTag: latest
+      DockerContext: ./query_by_file
+      Dockerfile: Dockerfile
+    Properties:
+      PackageType: Image
+      MemorySize: 1024   # YOLO needs at least 512 MB; 1024 for safety
+      Timeout: 60
+      Environment:
+        Variables:
+          PART3_API_BASE: !Ref Part3ApiBase
+          MODEL_PATH: /var/task/yolov8n.pt
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref QueryByFileApi
+            Path: /query/by-file
+            Method: POST
+
+Outputs:
+  ApiUrl:
+    Description: >
+      Query-by-file API URL.
+      Copy this value into CONFIG.part4QueryApiBase in js/config.js.
+    Value: !Sub https://${QueryByFileApi}.execute-api.${AWS::Region}.amazonaws.com/prod
