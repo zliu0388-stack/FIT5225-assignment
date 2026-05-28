@@ -2,7 +2,7 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
   AussieEcoLens Part 4 - Query by Uploaded File
-  Runs ephemeral YOLO inference on an uploaded image/video and returns
+  Runs AWS Rekognition inference on an uploaded image and returns
   similar media from the database via Part 3's /query/similar API.
 
 Parameters:
@@ -37,21 +37,24 @@ Resources:
         AllowHeaders: "'Content-Type,Authorization'"
         AllowOrigin: "'*'"
 
-  # ── Lambda (container image — needed to fit YOLO + PyTorch) ───────────────
+  # ── Lambda (ZIP) ──────────────────────────────────────────────────────────
   QueryByFileFunction:
     Type: AWS::Serverless::Function
-    Metadata:
-      DockerTag: latest
-      DockerContext: ./query_by_file
-      Dockerfile: Dockerfile
     Properties:
-      PackageType: Image
-      MemorySize: 1024   # YOLO needs at least 512 MB; 1024 for safety
-      Timeout: 60
+      CodeUri: query_by_file/
+      Handler: app.handler
+      Runtime: python3.13
+      Timeout: 30
+      MemorySize: 512
       Environment:
         Variables:
           PART3_API_BASE: !Ref Part3ApiBase
-          MODEL_PATH: /var/task/yolov8n.pt
+      Policies:
+        - Statement:
+            Effect: Allow
+            Action:
+              - rekognition:DetectLabels
+            Resource: "*"
       Events:
         Api:
           Type: Api

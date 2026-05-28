@@ -8,9 +8,9 @@ const CONFIG = {
 
     s3BaseUrl: 'https://fit5225-team102-aussie-ecolens.s3.ap-southeast-2.amazonaws.com',
 
-    // Part 4 - Notification service (fill in after deploying part4-notification)
-    part4NotificationApiBase: '',
+    // Part 4 - Notification service
+    part4NotificationApiBase: 'https://4p3ce9lda8.execute-api.ap-southeast-2.amazonaws.com/prod',
 
-    // Part 4 - Query-by-file service (fill in after deploying part4-query-by-file)
-    part4QueryApiBase: ''
+    // Part 4 - Query-by-file service
+    part4QueryApiBase: 'https://b069jpac09.execute-api.ap-southeast-2.amazonaws.com/prod'
 };
