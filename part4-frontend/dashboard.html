@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - AussieEcoLens</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="css/app.css" rel="stylesheet">
+</head>
+<body>
+
+<div class="app-shell">
+
+    <!-- Sidebar -->
+    <nav class="sidebar d-flex flex-column">
+        <div class="sidebar-brand">
+            <i class="bi bi-binoculars-fill me-2"></i>AussieEcoLens
+        </div>
+        <ul class="nav flex-column mt-2 flex-grow-1">
+            <li><a href="dashboard.html" class="nav-link active">
+                <i class="bi bi-grid-fill"></i> Dashboard
+            </a></li>
+            <li><a href="upload.html" class="nav-link">
+                <i class="bi bi-cloud-upload-fill"></i> Upload Media
+            </a></li>
+            <li><a href="query.html" class="nav-link">
+                <i class="bi bi-search"></i> Search &amp; Query
+            </a></li>
+            <li><a href="manage.html" class="nav-link">
+                <i class="bi bi-tags-fill"></i> Manage Tags
+            </a></li>
+            <li><a href="notifications.html" class="nav-link">
+                <i class="bi bi-bell-fill"></i> Notifications
+            </a></li>
+        </ul>
+        <div class="p-3" style="border-top: 1px solid rgba(255,255,255,0.15);">
+            <button class="btn btn-sm w-100 text-white" onclick="signOut()"
+                    style="background: rgba(255,255,255,0.12); border: none;">
+                <i class="bi bi-box-arrow-left me-1"></i> Sign Out
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main content -->
+    <div class="main-content">
+        <div class="topbar">
+            <h6 class="mb-0 fw-semibold">Dashboard</h6>
+            <span class="user-email" id="user-email">Loading...</span>
+        </div>
+
+        <div class="p-4">
+            <p class="text-muted mb-4">
+                Welcome to AussieEcoLens — upload, search, and manage your wildlife media.
+            </p>
+
+            <div class="row g-3">
+                <div class="col-sm-6 col-xl-3">
+                    <a href="upload.html" class="card feature-card p-3 shadow-sm">
+                        <div class="icon-box">
+                            <i class="bi bi-cloud-upload-fill"></i>
+                        </div>
+                        <h6 class="mb-1 fw-semibold">Upload Media</h6>
+                        <small class="text-muted">Upload images &amp; videos with auto-tagging</small>
+                    </a>
+                </div>
+                <div class="col-sm-6 col-xl-3">
+                    <a href="query.html" class="card feature-card p-3 shadow-sm">
+                        <div class="icon-box">
+                            <i class="bi bi-search"></i>
+                        </div>
+                        <h6 class="mb-1 fw-semibold">Search &amp; Query</h6>
+                        <small class="text-muted">Find media by species, thumbnail, or image</small>
+                    </a>
+                </div>
+                <div class="col-sm-6 col-xl-3">
+                    <a href="manage.html" class="card feature-card p-3 shadow-sm">
+                        <div class="icon-box">
+                            <i class="bi bi-tags-fill"></i>
+                        </div>
+                        <h6 class="mb-1 fw-semibold">Manage Tags</h6>
+                        <small class="text-muted">Bulk add/remove tags and delete files</small>
+                    </a>
+                </div>
+                <div class="col-sm-6 col-xl-3">
+                    <a href="notifications.html" class="card feature-card p-3 shadow-sm">
+                        <div class="icon-box">
+                            <i class="bi bi-bell-fill"></i>
+                        </div>
+                        <h6 class="mb-1 fw-semibold">Notifications</h6>
+                        <small class="text-muted">Subscribe to email alerts by species tag</small>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/amazon-cognito-identity-js@6.3.7/dist/amazon-cognito-identity.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script>
+    requireAuth().then(ok => {
+        if (!ok) return;
+        getCurrentUserInfo().then(info => {
+            document.getElementById('user-email').textContent = info.email;
+        }).catch(() => {});
+    });
+</script>
+</body>
+</html>
