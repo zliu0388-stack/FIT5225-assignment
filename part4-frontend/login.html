@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In - AussieEcoLens</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="css/app.css" rel="stylesheet">
+</head>
+<body class="auth-bg">
+
+<div class="container min-vh-100 d-flex align-items-center justify-content-center py-4">
+    <div class="card auth-card shadow-sm">
+        <div class="card-body p-4">
+
+            <div class="text-center mb-4">
+                <i class="bi bi-binoculars-fill text-success" style="font-size:2.2rem;"></i>
+                <h2 class="brand-title mt-2 mb-0">AussieEcoLens</h2>
+                <p class="brand-sub mb-0">Wildlife Media Management</p>
+            </div>
+
+            <div id="alert-box"></div>
+
+            <form id="login-form" novalidate>
+                <div class="mb-3">
+                    <label class="form-label fw-medium">Email</label>
+                    <input type="email" class="form-control" id="email"
+                           placeholder="you@example.com" required autocomplete="email">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-medium">Password</label>
+                    <input type="password" class="form-control" id="password"
+                           placeholder="Password" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn btn-eco w-100 mt-1" id="login-btn">
+                    Sign In
+                </button>
+            </form>
+
+            <hr class="my-3">
+            <p class="text-center text-muted mb-0" style="font-size:0.9rem;">
+                Don't have an account?
+                <a href="signup.html" class="text-success fw-medium">Sign Up</a>
+            </p>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/amazon-cognito-identity-js@6.3.7/dist/amazon-cognito-identity.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script>
+    // Show success message if coming from email verification
+    if (new URLSearchParams(window.location.search).get('verified') === '1') {
+        showAlert('success', 'Email verified successfully! You can now sign in.');
+    }
+
+    // Redirect if already signed in
+    isAuthenticated().then(ok => { if (ok) window.location.href = 'dashboard.html'; });
+
+    document.getElementById('login-form').addEventListener('submit', async e => {
+        e.preventDefault();
+        const btn = document.getElementById('login-btn');
+        const email    = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+
+        if (!email || !password) {
+            return showAlert('warning', 'Please fill in all fields.');
+        }
+
+        setLoading(btn, true, 'Signing in...');
+        clearAlert();
+
+        try {
+            await signIn(email, password);
+            window.location.href = 'dashboard.html';
+        } catch (err) {
+            if (err.code === 'UserNotConfirmedException') {
+                sessionStorage.setItem('pendingVerifyEmail', email);
+                window.location.href = 'verify.html';
+            } else {
+                showAlert('danger', err.message || 'Sign in failed. Please check your credentials.');
+                setLoading(btn, false, 'Sign In');
+            }
+        }
+    });
+
+    function showAlert(type, msg) {
+        document.getElementById('alert-box').innerHTML =
+            `<div class="alert alert-${type} py-2 mb-3">${msg}</div>`;
+    }
+    function clearAlert() { document.getElementById('alert-box').innerHTML = ''; }
+    function setLoading(btn, loading, label) {
+        btn.disabled = loading;
+        btn.innerHTML = loading
+            ? `<span class="spinner-border spinner-border-sm"></span> ${label}`
+            : label;
+    }
+</script>
+</body>
+</html>
