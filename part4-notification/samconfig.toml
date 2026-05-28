@@ -10,7 +10,5 @@ capabilities     = "CAPABILITY_IAM"
 parameter_overrides = [
     "CognitoUserPoolId=ap-southeast-2_NgrJbyS3q",
     "CognitoClientId=5k2a9ipn97p3efqfev1gtl07r9",
-    "MediaFilesStreamArn="
+    "MediaFilesStreamArn=arn:aws:dynamodb:ap-southeast-2:729985041330:table/fit5225-team102-media-files/stream/2026-05-28T13:17:36.059"
 ]
-# After enabling DynamoDB Streams on the media-files table, update MediaFilesStreamArn above
-# with the stream ARN from the AWS Console, then run: sam deploy
