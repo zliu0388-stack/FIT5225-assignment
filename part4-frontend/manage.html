@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Tags - AussieEcoLens</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="css/app.css" rel="stylesheet">
+    <style>
+        .op-radio .form-check {
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 0.6rem 1rem 0.6rem 2.5rem;
+            cursor: pointer;
+            transition: border-color 0.15s, background-color 0.15s;
+        }
+        .op-radio .form-check:has(input:checked) {
+            border-color: #1a6b3c;
+            background-color: #f0f7f0;
+        }
+        .op-radio .form-check-input { margin-top: 0.25rem; }
+        .section-divider { border-top: 1px solid #e4e4e4; margin: 2rem 0; }
+        .delete-zone { border: 2px solid #f8d7da; border-radius: 10px; padding: 1.25rem; background: #fff5f5; }
+    </style>
+</head>
+<body>
+
+<div class="app-shell">
+
+    <!-- Sidebar -->
+    <nav class="sidebar d-flex flex-column">
+        <div class="sidebar-brand">
+            <i class="bi bi-binoculars-fill me-2"></i>AussieEcoLens
+        </div>
+        <ul class="nav flex-column mt-2 flex-grow-1">
+            <li><a href="dashboard.html" class="nav-link"><i class="bi bi-grid-fill"></i> Dashboard</a></li>
+            <li><a href="upload.html" class="nav-link"><i class="bi bi-cloud-upload-fill"></i> Upload Media</a></li>
+            <li><a href="query.html" class="nav-link"><i class="bi bi-search"></i> Search &amp; Query</a></li>
+            <li><a href="manage.html" class="nav-link active"><i class="bi bi-tags-fill"></i> Manage Tags</a></li>
+            <li><a href="notifications.html" class="nav-link"><i class="bi bi-bell-fill"></i> Notifications</a></li>
+        </ul>
+        <div class="p-3" style="border-top: 1px solid rgba(255,255,255,0.15);">
+            <button class="btn btn-sm w-100 text-white" onclick="signOut()"
+                    style="background: rgba(255,255,255,0.12); border: none;">
+                <i class="bi bi-box-arrow-left me-1"></i> Sign Out
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main content -->
+    <div class="main-content">
+        <div class="topbar">
+            <h6 class="mb-0 fw-semibold">Manage Tags &amp; Files</h6>
+            <span class="user-email" id="user-email">Loading...</span>
+        </div>
+
+        <div class="p-4" style="max-width: 760px;">
+
+            <!-- ── Section 1: Bulk Tag Management ─────────────────────────── -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-4">
+
+                    <h6 class="fw-semibold mb-1">
+                        <i class="bi bi-tags-fill text-success me-2"></i>Bulk Tag Edit
+                    </h6>
+                    <p class="text-muted mb-4" style="font-size:0.875rem;">
+                        Add or remove species tags across multiple files at once.
+                        Enter file URLs, specify tags, and choose the operation.
+                    </p>
+
+                    <!-- File URLs -->
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">File URLs
+                            <span class="text-muted fw-normal">(one per line)</span>
+                        </label>
+                        <textarea class="form-control font-monospace" id="tag-urls"
+                                  rows="4" placeholder="https://...s3.amazonaws.com/uploads/photo1.jpg&#10;https://...s3.amazonaws.com/uploads/photo2.jpg"
+                                  style="font-size:0.8rem;"></textarea>
+                    </div>
+
+                    <!-- Tags to apply -->
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Tags to Apply</label>
+                        <div id="tag-edit-inputs"></div>
+                        <button type="button" class="btn btn-outline-success btn-sm mt-1"
+                                onclick="addEditTagRow()">
+                            <i class="bi bi-plus-lg me-1"></i> Add Tag
+                        </button>
+                    </div>
+
+                    <!-- Operation selector -->
+                    <div class="mb-4">
+                        <label class="form-label fw-medium">Operation</label>
+                        <div class="d-flex gap-3 op-radio">
+                            <div class="form-check flex-fill">
+                                <input class="form-check-input" type="radio" name="tag-op"
+                                       id="op-add" value="1" checked>
+                                <label class="form-check-label" for="op-add">
+                                    <strong>Add</strong> tags to the selected files
+                                </label>
+                            </div>
+                            <div class="form-check flex-fill">
+                                <input class="form-check-input" type="radio" name="tag-op"
+                                       id="op-remove" value="0">
+                                <label class="form-check-label" for="op-remove">
+                                    <strong>Remove</strong> tags from the selected files
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Apply button + result -->
+                    <button class="btn btn-eco px-4" id="apply-tags-btn" onclick="applyBulkTag()">
+                        <i class="bi bi-check2-circle me-1"></i> Apply
+                    </button>
+                    <div id="tag-result" class="mt-3"></div>
+
+                </div>
+            </div>
+
+            <!-- ── Section 2: Delete Files ────────────────────────────────── -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+
+                    <h6 class="fw-semibold mb-1">
+                        <i class="bi bi-trash3-fill text-danger me-2"></i>Delete Files
+                    </h6>
+                    <p class="text-muted mb-4" style="font-size:0.875rem;">
+                        Permanently removes the original file, thumbnail, and all database records.
+                        This action <strong>cannot be undone</strong>.
+                    </p>
+
+                    <div class="delete-zone">
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">File URLs to Delete
+                                <span class="text-muted fw-normal">(one per line)</span>
+                            </label>
+                            <textarea class="form-control font-monospace" id="delete-urls"
+                                      rows="4" placeholder="https://...s3.amazonaws.com/uploads/photo1.jpg&#10;https://...s3.amazonaws.com/uploads/photo2.jpg"
+                                      style="font-size:0.8rem;"></textarea>
+                        </div>
+
+                        <button class="btn btn-danger px-4" id="delete-btn" onclick="confirmDelete()">
+                            <i class="bi bi-trash3-fill me-1"></i> Delete Files
+                        </button>
+                    </div>
+
+                    <div id="delete-result" class="mt-3"></div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Delete confirmation modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:440px;">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h6 class="modal-title fw-semibold text-danger">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Confirm Deletion
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <p class="text-muted mb-1" style="font-size:0.9rem;">
+                    You are about to permanently delete
+                    <strong id="delete-count">0</strong> file(s). This will remove:
+                </p>
+                <ul class="text-muted mb-0" style="font-size:0.9rem;">
+                    <li>Original file(s) from S3</li>
+                    <li>Associated thumbnail(s)</li>
+                    <li>All database records and tags</li>
+                </ul>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger px-3" id="confirm-delete-btn"
+                        onclick="executeDelete()">
+                    <i class="bi bi-trash3-fill me-1"></i> Delete
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/amazon-cognito-identity-js@6.3.7/dist/amazon-cognito-identity.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/api.js"></script>
+<script>
+    requireAuth().then(ok => {
+        if (!ok) return;
+        getCurrentUserInfo().then(info => {
+            document.getElementById('user-email').textContent = info.email;
+        }).catch(() => {});
+    });
+
+    // ── Tag edit rows ─────────────────────────────────────────────────────────
+    let _editCounter = 0;
+    const _editRows  = [];
+
+    function addEditTagRow() {
+        _editCounter++;
+        _editRows.push(_editCounter);
+        _renderEditRows();
+    }
+
+    function _removeEditRow(id) {
+        const idx = _editRows.indexOf(id);
+        if (idx !== -1) _editRows.splice(idx, 1);
+        if (_editRows.length === 0) addEditTagRow();
+        else _renderEditRows();
+    }
+
+    function _renderEditRows() {
+        document.getElementById('tag-edit-inputs').innerHTML = _editRows.map(id => `
+            <div class="d-flex gap-2 mb-2 align-items-center">
+                <input type="text" class="form-control" id="et-${id}"
+                       placeholder="e.g. koala" style="max-width:200px;">
+                <input type="number" class="form-control" id="ec-${id}"
+                       value="1" min="1" style="max-width:100px;" title="Count delta">
+                ${_editRows.length > 1
+                    ? `<button type="button" class="btn btn-outline-secondary btn-sm px-2"
+                               onclick="_removeEditRow(${id})" title="Remove">
+                           <i class="bi bi-dash-lg"></i>
+                       </button>`
+                    : `<div style="width:34px;"></div>`}
+            </div>`).join('');
+    }
+
+    function _getEditTags() {
+        const tags = {};
+        for (const id of _editRows) {
+            const name  = (document.getElementById(`et-${id}`).value || '').trim().toLowerCase();
+            const count = parseInt(document.getElementById(`ec-${id}`).value, 10) || 1;
+            if (name) tags[name] = count;
+        }
+        return tags;
+    }
+
+    function _parseUrls(textareaId) {
+        return document.getElementById(textareaId).value
+            .split('\n')
+            .map(u => u.trim())
+            .filter(u => u.length > 0);
+    }
+
+    // Initialise with one tag row
+    addEditTagRow();
+
+    // ── Bulk tag apply ────────────────────────────────────────────────────────
+    async function applyBulkTag() {
+        const urls      = _parseUrls('tag-urls');
+        const tags      = _getEditTags();
+        const operation = parseInt(
+            document.querySelector('input[name="tag-op"]:checked').value, 10);
+
+        if (!urls.length)            return showTagResult('warning', 'Please enter at least one file URL.');
+        if (!Object.keys(tags).length) return showTagResult('warning', 'Please enter at least one tag.');
+
+        const btn = document.getElementById('apply-tags-btn');
+        _setLoading(btn, true);
+        clearResult('tag-result');
+
+        try {
+            const token  = await getIdToken();
+            const result = await bulkTag(urls, tags, operation, token);
+            const opWord = operation === 1 ? 'added to' : 'removed from';
+            showTagResult('success',
+                `Tags successfully ${opWord} ${urls.length} file(s). ` +
+                `Tags: ${Object.keys(tags).join(', ')}.`);
+        } catch (err) {
+            showTagResult('danger', err.message || 'Operation failed. Please try again.');
+        } finally {
+            _setLoading(btn, false);
+            btn.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Apply';
+        }
+    }
+
+    // ── Delete files ──────────────────────────────────────────────────────────
+    let _pendingDeleteUrls = [];
+
+    function confirmDelete() {
+        _pendingDeleteUrls = _parseUrls('delete-urls');
+        if (!_pendingDeleteUrls.length) {
+            return showDeleteResult('warning', 'Please enter at least one file URL.');
+        }
+        document.getElementById('delete-count').textContent = _pendingDeleteUrls.length;
+        new bootstrap.Modal(document.getElementById('confirmModal')).show();
+    }
+
+    async function executeDelete() {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('confirmModal'));
+        modal.hide();
+
+        const btn = document.getElementById('delete-btn');
+        const confirmBtn = document.getElementById('confirm-delete-btn');
+        _setLoading(btn, true);
+        _setLoading(confirmBtn, true);
+        clearResult('delete-result');
+
+        try {
+            const token  = await getIdToken();
+            const result = await deleteFiles(_pendingDeleteUrls, token);
+
+            const deletedCount  = (result.deleted  || []).length;
+            const notFoundCount = (result.not_found || []).length;
+
+            let msg = `Deleted <strong>${deletedCount}</strong> file(s) successfully.`;
+            if (notFoundCount > 0) {
+                msg += ` <span class="text-warning">${notFoundCount} URL(s) not found.</span>`;
+            }
+            showDeleteResult('success', msg);
+
+            // Clear the textarea if all deleted
+            if (notFoundCount === 0) {
+                document.getElementById('delete-urls').value = '';
+            }
+            _pendingDeleteUrls = [];
+        } catch (err) {
+            showDeleteResult('danger', err.message || 'Delete failed. Please try again.');
+        } finally {
+            _setLoading(btn, false);
+            btn.innerHTML = '<i class="bi bi-trash3-fill me-1"></i> Delete Files';
+            _setLoading(confirmBtn, false);
+            confirmBtn.innerHTML = '<i class="bi bi-trash3-fill me-1"></i> Delete';
+        }
+    }
+
+    // ── UI helpers ────────────────────────────────────────────────────────────
+    function showTagResult(type, msg) {
+        document.getElementById('tag-result').innerHTML =
+            `<div class="alert alert-${type} py-2 mb-0">${msg}</div>`;
+    }
+    function showDeleteResult(type, msg) {
+        document.getElementById('delete-result').innerHTML =
+            `<div class="alert alert-${type} py-2 mb-0">${msg}</div>`;
+    }
+    function clearResult(id) {
+        document.getElementById(id).innerHTML = '';
+    }
+    function _setLoading(btn, loading) {
+        btn.disabled = loading;
+        if (loading) {
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        }
+    }
+</script>
+</body>
+</html>
