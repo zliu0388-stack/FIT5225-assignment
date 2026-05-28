@@ -1,0 +1,181 @@
+/* ===== Base ===== */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* ===== Auth pages ===== */
+.auth-bg {
+    background-color: #f0f7f0;
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 440px;
+    border-radius: 12px;
+    border: none;
+}
+
+.brand-title {
+    color: #1a6b3c;
+    font-weight: 700;
+}
+
+.brand-sub {
+    color: #52b788;
+    font-size: 0.85rem;
+}
+
+.btn-eco {
+    background-color: #1a6b3c;
+    border-color: #1a6b3c;
+    color: white;
+}
+
+.btn-eco:hover, .btn-eco:focus {
+    background-color: #155732;
+    border-color: #155732;
+    color: white;
+}
+
+.form-control:focus {
+    border-color: #52b788;
+    box-shadow: 0 0 0 0.2rem rgba(82, 183, 136, 0.25);
+}
+
+/* ===== Dashboard layout ===== */
+.app-shell {
+    display: flex;
+    min-height: 100vh;
+}
+
+.sidebar {
+    width: 240px;
+    min-width: 240px;
+    background-color: #1a6b3c;
+    color: white;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-brand {
+    padding: 1.25rem 1.25rem;
+    font-size: 1.05rem;
+    font-weight: 700;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.sidebar .nav-link {
+    color: rgba(255, 255, 255, 0.75);
+    padding: 0.6rem 1.25rem;
+    border-radius: 6px;
+    margin: 2px 8px;
+    font-size: 0.9rem;
+}
+
+.sidebar .nav-link:hover,
+.sidebar .nav-link.active {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+.sidebar .nav-link i {
+    width: 20px;
+    display: inline-block;
+}
+
+.main-content {
+    flex: 1;
+    background-color: #f8faf8;
+    overflow-y: auto;
+}
+
+.topbar {
+    background-color: #ffffff;
+    border-bottom: 1px solid #e4e4e4;
+    padding: 0.75rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.topbar .user-email {
+    color: #666;
+    font-size: 0.875rem;
+}
+
+/* ===== Feature cards (dashboard) ===== */
+.feature-card {
+    border: none;
+    border-radius: 10px;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1) !important;
+    color: inherit;
+}
+
+.feature-card .icon-box {
+    width: 52px;
+    height: 52px;
+    border-radius: 10px;
+    background-color: #e8f5e8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.75rem;
+}
+
+.feature-card .icon-box i {
+    font-size: 1.5rem;
+    color: #1a6b3c;
+}
+
+/* ===== Result cards (query pages) ===== */
+.media-card {
+    border-radius: 8px;
+    overflow: hidden;
+    border: none;
+    transition: transform 0.15s ease;
+}
+
+.media-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.media-card img {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    cursor: pointer;
+}
+
+/* ===== Misc ===== */
+.alert {
+    border-radius: 8px;
+}
+
+.spinner-border-sm {
+    margin-right: 6px;
+}
+
+.tag-badge {
+    background-color: #d1f0e0;
+    color: #1a6b3c;
+    border-radius: 20px;
+    padding: 2px 10px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.section-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 1rem;
+}
