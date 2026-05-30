@@ -1,0 +1,75 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: FIT5225 Team102 Part2 Model Service (Framework)
+
+Parameters:
+  StageName:
+    Type: String
+    Default: prod
+  UploadBucketName:
+    Type: String
+    Default: fit5225-team102-aussie-ecolens
+  UploadPrefix:
+    Type: String
+    Default: uploads/
+  Part3UpsertUrl:
+    Type: String
+    Default: ""
+  ModelBucket:
+    Type: String
+    Default: fit5225-team102-aussie-ecolens
+  MdModelKey:
+    Type: String
+    Default: models/mdv5a.pt
+  SpeciesModelKey:
+    Type: String
+    Default: models/model.pt
+  LabelsKey:
+    Type: String
+    Default: models/labels.txt
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Timeout: 120
+    MemorySize: 1024
+    CodeUri: src/
+    Environment:
+      Variables:
+        AWS_REGION: !Ref AWS::Region
+        PART3_UPSERT_URL: !Ref Part3UpsertUrl
+        MODEL_BUCKET: !Ref ModelBucket
+        MD_MODEL_KEY: !Ref MdModelKey
+        SPECIES_MODEL_KEY: !Ref SpeciesModelKey
+        LABELS_KEY: !Ref LabelsKey
+        MIN_DETECTION_CONF: "0.2"
+
+Resources:
+  AutoTagFromS3Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/auto_tag_from_s3.handler
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref UploadBucketName
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+              Resource: !Sub arn:aws:s3:::${ModelBucket}/*
+      Events:
+        UploadCreated:
+          Type: S3
+          Properties:
+            Bucket: !Ref UploadBucketName
+            Events:
+              - s3:ObjectCreated:*
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: !Ref UploadPrefix
+
+Outputs:
+  FunctionName:
+    Value: !Ref AutoTagFromS3Function

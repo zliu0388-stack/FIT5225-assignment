@@ -1,0 +1,14 @@
+{
+  "Records": [
+    {
+      "s3": {
+        "bucket": {
+          "name": "fit5225-team102-aussie-ecolens"
+        },
+        "object": {
+          "key": "uploads/example.jpg"
+        }
+      }
+    }
+  ]
+}

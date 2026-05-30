@@ -1,0 +1,4 @@
+*.pt
+mg_detections.json
+cropped_images/
+__pycache__/
