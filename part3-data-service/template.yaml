@@ -57,6 +57,39 @@ Resources:
           CognitoAuthorizer:
             UserPoolArn: !Sub arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPoolId}
 
+  AutoTagMediaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handlers/auto_tag_media.handler
+      Timeout: 120
+      MemorySize: 2048
+      Environment:
+        Variables:
+          MEDIA_TABLE: !Ref MediaTableName
+          TAG_INDEX_TABLE: !Ref TagIndexTableName
+          THUMB_LOOKUP_TABLE: !Ref ThumbLookupTableName
+          TAG_SUBSCRIPTION_TABLE: !Ref TagSubscriptionTableName
+          BUCKET_NAME: !Ref BucketName
+          MODEL_PATH: /opt/models/yolov8n.pt
+          MODEL_NAME: YOLOv8
+          MODEL_VERSION: yolov8n
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref BucketName
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MediaTableName
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TagIndexTableName
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ThumbLookupTableName
+      Events:
+        AutoTagApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DataApi
+            Path: /data/media/auto-tag
+            Method: post
+
   UpsertMediaFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -171,3 +204,7 @@ Outputs:
   UpsertMediaPath:
     Description: Upsert media endpoint
     Value: !Sub https://${DataApi}.execute-api.${AWS::Region}.amazonaws.com/${StageName}/data/media
+
+  AutoTagMediaPath:
+    Description: Auto tagging endpoint
+    Value: !Sub https://${DataApi}.execute-api.${AWS::Region}.amazonaws.com/${StageName}/data/media/auto-tag
