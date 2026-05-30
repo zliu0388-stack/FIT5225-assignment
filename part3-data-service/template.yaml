@@ -30,7 +30,7 @@ Parameters:
 
 Globals:
   Function:
-    Runtime: python3.11
+    Runtime: python3.13
     Timeout: 30
     MemorySize: 256
     CodeUri: src/
