@@ -70,9 +70,9 @@ Resources:
           THUMB_LOOKUP_TABLE: !Ref ThumbLookupTableName
           TAG_SUBSCRIPTION_TABLE: !Ref TagSubscriptionTableName
           BUCKET_NAME: !Ref BucketName
-          MODEL_PATH: /opt/models/yolov8n.pt
-          MODEL_NAME: YOLOv8
-          MODEL_VERSION: yolov8n
+          MODEL_PATH: /opt/models/model.pt
+          MODEL_NAME: aussie-ecolens-detector
+          MODEL_VERSION: v1
       Policies:
         - S3ReadPolicy:
             BucketName: !Ref BucketName
