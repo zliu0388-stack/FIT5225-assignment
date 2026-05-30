@@ -10,7 +10,3 @@ class Settings:
         "TAG_SUBSCRIPTION_TABLE", "fit5225-team102-tag-subscriptions"
     )
     bucket_name = os.getenv("BUCKET_NAME", "fit5225-team102-aussie-ecolens")
-
-model_path = os.getenv("MODEL_PATH", "/opt/models/model.pt")
-model_name = os.getenv("MODEL_NAME", "aussie-ecolens-detector")
-model_version = os.getenv("MODEL_VERSION", "v1")
