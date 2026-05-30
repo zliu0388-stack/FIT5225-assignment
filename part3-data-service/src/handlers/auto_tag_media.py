@@ -1,3 +1,4 @@
+import json
 import os
 import tempfile
 import urllib.parse
@@ -72,8 +73,19 @@ def handler(event, _context):
 
 
 def _parse_event(event: Dict[str, Any]) -> List[Dict[str, Any]]:
+    # API Gateway event
+    if "body" in event:
+        body = event["body"]
+
+        if isinstance(body, str):
+            body = json.loads(body or "{}")
+
+        return _parse_event(body)
+
+    # Standard S3 event
     if "Records" in event:
         records = []
+
         for record in event.get("Records", []):
             s3_info = record.get("s3", {})
             bucket = s3_info.get("bucket", {}).get("name")
@@ -93,6 +105,7 @@ def _parse_event(event: Dict[str, Any]) -> List[Dict[str, Any]]:
 
         return records
 
+    # Custom direct event
     if "bucket" in event and ("object_key" in event or "key" in event):
         return [{
             "bucket": event["bucket"],
@@ -110,6 +123,7 @@ def _parse_event(event: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 def _download_from_s3(bucket: str, object_key: str) -> str:
     suffix = Path(object_key).suffix or ".tmp"
+
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         local_path = tmp.name
 
