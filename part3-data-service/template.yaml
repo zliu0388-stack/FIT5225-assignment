@@ -57,7 +57,7 @@ Resources:
           CognitoAuthorizer:
             UserPoolArn: !Sub arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPoolId}
 
-    AutoTagMediaFunction:
+  AutoTagMediaFunction:
     Type: AWS::Serverless::Function
     Properties:
       Handler: handlers/auto_tag_media.handler
