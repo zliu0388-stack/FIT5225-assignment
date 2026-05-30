@@ -11,6 +11,6 @@ class Settings:
     )
     bucket_name = os.getenv("BUCKET_NAME", "fit5225-team102-aussie-ecolens")
 
-model_path = os.getenv("MODEL_PATH", "/opt/models/yolov8n.pt")
-model_name = os.getenv("MODEL_NAME", "YOLOv8")
-model_version = os.getenv("MODEL_VERSION", "yolov8n")
+model_path = os.getenv("MODEL_PATH", "/opt/models/model.pt")
+model_name = os.getenv("MODEL_NAME", "aussie-ecolens-detector")
+model_version = os.getenv("MODEL_VERSION", "v1")
