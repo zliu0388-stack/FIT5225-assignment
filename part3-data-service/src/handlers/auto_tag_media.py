@@ -14,7 +14,7 @@ from handlers.common import error, ok
 
 
 s3_client = boto3.client("s3", region_name=Settings.aws_region)
-rekognition_client = boto3.client("rekognition", region_name=Settings.aws_region)
+_model = None
 
 
 def handler(event, _context):
@@ -34,17 +34,18 @@ def handler(event, _context):
             if media_type not in {"image", "video"}:
                 return error("media_type must be image or video")
 
-            if media_type == "image":
-                tags_map = _detect_image_tags(bucket, object_key)
-            else:
-                local_path = _download_from_s3(bucket, object_key)
-                try:
+            local_path = _download_from_s3(bucket, object_key)
+
+            try:
+                if media_type == "image":
+                    tags_map = _detect_image_tags(local_path)
+                else:
                     tags_map = _detect_video_tags(local_path)
-                finally:
-                    try:
-                        os.remove(local_path)
-                    except OSError:
-                        pass
+            finally:
+                try:
+                    os.remove(local_path)
+                except OSError:
+                    pass
 
             item = {
                 "owner_sub": record.get("owner_sub", "unknown-user"),
@@ -56,8 +57,8 @@ def handler(event, _context):
                 "media_type": media_type,
                 "checksum_sha256": record.get("checksum_sha256", "unknown"),
                 "tags_map": tags_map,
-                "model_name": Settings.model_name,
-                "model_version": Settings.model_version,
+                "model_name": getattr(Settings, "model_name", "provided-model"),
+                "model_version": getattr(Settings, "model_version", "v1"),
                 "status": "ACTIVE",
             }
 
@@ -73,7 +74,7 @@ def handler(event, _context):
 
 
 def _parse_event(event: Dict[str, Any]) -> List[Dict[str, Any]]:
-    # API Gateway event
+    # API Gateway event body
     if "body" in event:
         body = event["body"]
 
@@ -82,7 +83,7 @@ def _parse_event(event: Dict[str, Any]) -> List[Dict[str, Any]]:
 
         return _parse_event(body)
 
-    # Standard S3 event
+    # S3 event
     if "Records" in event:
         records = []
 
@@ -105,7 +106,7 @@ def _parse_event(event: Dict[str, Any]) -> List[Dict[str, Any]]:
 
         return records
 
-    # Custom direct event
+    # Direct Postman / custom API event
     if "bucket" in event and ("object_key" in event or "key" in event):
         return [{
             "bucket": event["bucket"],
@@ -121,24 +122,42 @@ def _parse_event(event: Dict[str, Any]) -> List[Dict[str, Any]]:
     return []
 
 
-def _detect_image_tags(bucket: str, object_key: str) -> Dict[str, int]:
-    response = rekognition_client.detect_labels(
-        Image={
-            "S3Object": {
-                "Bucket": bucket,
-                "Name": object_key,
-            }
-        },
-        MaxLabels=20,
-        MinConfidence=60,
-    )
+def _download_from_s3(bucket: str, object_key: str) -> str:
+    suffix = Path(object_key).suffix or ".tmp"
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        local_path = tmp.name
+
+    s3_client.download_file(bucket, object_key, local_path)
+    return local_path
+
+
+def _get_model():
+    global _model
+
+    if _model is None:
+        from ultralytics import YOLO
+        _model = YOLO(Settings.model_path)
+
+    return _model
+
+
+def _detect_image_tags(image_path: str) -> Dict[str, int]:
+    model = _get_model()
+    results = model(image_path)
 
     counter = Counter()
 
-    for label in response.get("Labels", []):
-        tag = _normalise_tag(label.get("Name", ""))
-        if tag:
-            counter[tag] += 1
+    for result in results:
+        names = result.names
+
+        if result.boxes is None:
+            continue
+
+        for cls_id in result.boxes.cls:
+            tag = _normalise_tag(names[int(cls_id)])
+            if tag:
+                counter[tag] += 1
 
     return dict(counter)
 
@@ -146,6 +165,7 @@ def _detect_image_tags(bucket: str, object_key: str) -> Dict[str, int]:
 def _detect_video_tags(video_path: str) -> Dict[str, int]:
     import cv2
 
+    model = _get_model()
     cap = cv2.VideoCapture(video_path)
 
     if not cap.isOpened():
@@ -169,18 +189,8 @@ def _detect_video_tags(video_path: str) -> Dict[str, int]:
             cv2.imwrite(frame_path, frame)
 
             try:
-                with open(frame_path, "rb") as image_file:
-                    response = rekognition_client.detect_labels(
-                        Image={"Bytes": image_file.read()},
-                        MaxLabels=20,
-                        MinConfidence=60,
-                    )
-
-                for label in response.get("Labels", []):
-                    tag = _normalise_tag(label.get("Name", ""))
-                    if tag:
-                        counter[tag] += 1
-
+                image_tags = _detect_image_tags(frame_path)
+                counter.update(image_tags)
             finally:
                 try:
                     os.remove(frame_path)
@@ -191,16 +201,6 @@ def _detect_video_tags(video_path: str) -> Dict[str, int]:
 
     cap.release()
     return dict(counter)
-
-
-def _download_from_s3(bucket: str, object_key: str) -> str:
-    suffix = Path(object_key).suffix or ".tmp"
-
-    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-        local_path = tmp.name
-
-    s3_client.download_file(bucket, object_key, local_path)
-    return local_path
 
 
 def _normalise_tag(tag: str) -> str:
