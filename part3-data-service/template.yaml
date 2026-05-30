@@ -62,7 +62,7 @@ Resources:
     Properties:
       Handler: handlers/auto_tag_media.handler
       Timeout: 120
-      MemorySize: 2048
+      MemorySize: 1024
       Environment:
         Variables:
           MEDIA_TABLE: !Ref MediaTableName
@@ -70,8 +70,8 @@ Resources:
           THUMB_LOOKUP_TABLE: !Ref ThumbLookupTableName
           TAG_SUBSCRIPTION_TABLE: !Ref TagSubscriptionTableName
           BUCKET_NAME: !Ref BucketName
-          MODEL_PATH: /opt/models/model.pt
-          MODEL_NAME: aussie-ecolens-detector
+          MODEL_PATH: rekognition
+          MODEL_NAME: aws-rekognition
           MODEL_VERSION: v1
       Policies:
         - S3ReadPolicy:
@@ -82,6 +82,11 @@ Resources:
             TableName: !Ref TagIndexTableName
         - DynamoDBCrudPolicy:
             TableName: !Ref ThumbLookupTableName
+        - Statement:
+            - Effect: Allow
+              Action:
+                - rekognition:DetectLabels
+              Resource: "*"
       Events:
         AutoTagApi:
           Type: Api
