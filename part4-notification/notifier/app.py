@@ -27,12 +27,12 @@ def handler(event, context):
 
         if event_name == 'INSERT':
             # Notify for all tags on a newly uploaded file
-            added_tags = set((new_image.get('tags') or {}).keys())
+            added_tags = set((new_image.get('tags_map') or {}).keys())
         else:
             # Notify only for tags that were not in the old version
             old_image = _deserialize(record['dynamodb'].get('OldImage', {}))
-            old_tags  = set((old_image.get('tags') or {}).keys())
-            new_tags  = set((new_image.get('tags') or {}).keys())
+            old_tags  = set((old_image.get('tags_map') or {}).keys())
+            new_tags  = set((new_image.get('tags_map') or {}).keys())
             added_tags = new_tags - old_tags
 
         if not added_tags:
