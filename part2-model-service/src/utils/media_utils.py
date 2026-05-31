@@ -4,6 +4,7 @@ import tempfile
 from pathlib import Path
 
 import boto3
+import cv2
 from PIL import Image
 
 from config import Settings
@@ -62,12 +63,24 @@ def build_thumbnail_key(object_key: str) -> str:
     return f"{Settings.thumbnail_prefix}{filename_stem}_thumb.jpg"
 
 
-def create_thumbnail(bucket: str, object_key: str, image_bytes: bytes) -> tuple[str, str]:
+def create_thumbnail(
+    bucket: str,
+    object_key: str,
+    image_bytes: bytes,
+) -> tuple[str, str]:
+
     image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     image.thumbnail((300, 300))
 
     output = io.BytesIO()
-    image.save(output, format="JPEG", quality=80, optimize=True)
+
+    image.save(
+        output,
+        format="JPEG",
+        quality=80,
+        optimize=True,
+    )
+
     output.seek(0)
 
     thumbnail_key = build_thumbnail_key(object_key)
@@ -80,3 +93,40 @@ def create_thumbnail(bucket: str, object_key: str, image_bytes: bytes) -> tuple[
     )
 
     return thumbnail_key, make_s3_url(bucket, thumbnail_key)
+
+
+def extract_first_video_frame(
+    bucket: str,
+    object_key: str,
+) -> tuple[bytes, str]:
+    """
+    Extract only the first frame from video.
+    Keeps Lambda lightweight and stable.
+    """
+
+    video_path = download_s3_object(bucket, object_key)
+
+    cap = cv2.VideoCapture(video_path)
+
+    success, frame = cap.read()
+
+    if not success:
+        cap.release()
+        raise RuntimeError("Failed to extract first frame from video")
+
+    cap.release()
+
+    success, encoded = cv2.imencode(".jpg", frame)
+
+    if not success:
+        raise RuntimeError("Failed to encode frame")
+
+    frame_bytes = encoded.tobytes()
+
+    thumbnail_key, thumbnail_url = create_thumbnail(
+        bucket=bucket,
+        object_key=object_key,
+        image_bytes=frame_bytes,
+    )
+
+    return frame_bytes, thumbnail_url
