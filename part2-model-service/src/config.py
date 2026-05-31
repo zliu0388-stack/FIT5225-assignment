@@ -4,10 +4,10 @@ import os
 class Settings:
     aws_region = os.getenv("AWS_REGION", "ap-southeast-2")
 
-    upload_bucket = os.getenv("UPLOAD_BUCKET", "fit5225-team102-aussie-ecolens")
-    upload_prefix = os.getenv("UPLOAD_PREFIX", "uploads/")
-    thumbnail_prefix = os.getenv("THUMBNAIL_PREFIX", "thumbnails/")
-    temp_prefix = os.getenv("TEMP_PREFIX", "temp/")
+    upload_bucket = os.getenv("UPLOAD_BUCKET", "fit5225-team102-aussie-ecolens").strip()
+    upload_prefix = os.getenv("UPLOAD_PREFIX", "uploads/").strip()
+    thumbnail_prefix = os.getenv("THUMBNAIL_PREFIX", "thumbnails/").strip()
+    temp_prefix = os.getenv("TEMP_PREFIX", "temp/").strip()
 
     part3_upsert_url = os.getenv(
         "PART3_UPSERT_URL",
