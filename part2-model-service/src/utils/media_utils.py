@@ -57,7 +57,8 @@ def make_s3_url(bucket: str, key: str) -> str:
 
 
 def build_thumbnail_key(object_key: str) -> str:
-    filename_stem = Path(object_key).stem
+    safe_key = object_key.replace("/", "_")
+    filename_stem = Path(safe_key).stem
     return f"{Settings.thumbnail_prefix}{filename_stem}_thumb.jpg"
 
 
