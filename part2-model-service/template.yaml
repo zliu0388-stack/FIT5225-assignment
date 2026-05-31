@@ -1,32 +1,51 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: FIT5225 Team102 Part2 Model Service (Framework)
+Description: FIT5225 Team102 Part2 Model Service
 
 Parameters:
   StageName:
     Type: String
     Default: prod
+
   UploadBucketName:
     Type: String
     Default: fit5225-team102-aussie-ecolens
+
   UploadPrefix:
     Type: String
     Default: uploads/
+
+  ThumbnailPrefix:
+    Type: String
+    Default: thumbnails/
+
   Part3UpsertUrl:
     Type: String
+    Default: https://5jo3ferouh.execute-api.ap-southeast-2.amazonaws.com/prod/data/media
+
+  Part3AuthToken:
+    Type: String
     Default: ""
+
   ModelBucket:
     Type: String
     Default: fit5225-team102-aussie-ecolens
+
   MdModelKey:
     Type: String
     Default: models/mdv5a.pt
+
   SpeciesModelKey:
     Type: String
     Default: models/model.pt
+
   LabelsKey:
     Type: String
     Default: models/labels.txt
+
+  EnableModelInference:
+    Type: String
+    Default: "false"
 
 Globals:
   Function:
@@ -37,12 +56,20 @@ Globals:
     Environment:
       Variables:
         AWS_REGION: !Ref AWS::Region
+        UPLOAD_BUCKET: !Ref UploadBucketName
+        UPLOAD_PREFIX: !Ref UploadPrefix
+        THUMBNAIL_PREFIX: !Ref ThumbnailPrefix
+        TEMP_PREFIX: temp/
         PART3_UPSERT_URL: !Ref Part3UpsertUrl
+        PART3_AUTH_TOKEN: !Ref Part3AuthToken
         MODEL_BUCKET: !Ref ModelBucket
         MD_MODEL_KEY: !Ref MdModelKey
         SPECIES_MODEL_KEY: !Ref SpeciesModelKey
         LABELS_KEY: !Ref LabelsKey
         MIN_DETECTION_CONF: "0.2"
+        ENABLE_MODEL_INFERENCE: !Ref EnableModelInference
+        MODEL_NAME: wildlife-detector
+        MODEL_VERSION: v1
 
 Resources:
   AutoTagFromS3Function:
@@ -50,13 +77,26 @@ Resources:
     Properties:
       Handler: handlers/auto_tag_from_s3.handler
       Policies:
-        - S3ReadPolicy:
-            BucketName: !Ref UploadBucketName
         - Statement:
             - Effect: Allow
               Action:
                 - s3:GetObject
-              Resource: !Sub arn:aws:s3:::${ModelBucket}/*
+              Resource:
+                - !Sub arn:aws:s3:::${UploadBucketName}/${UploadPrefix}*
+                - !Sub arn:aws:s3:::${ModelBucket}/*
+            - Effect: Allow
+              Action:
+                - s3:PutObject
+              Resource:
+                - !Sub arn:aws:s3:::${UploadBucketName}/thumbnails/*
+                - !Sub arn:aws:s3:::${UploadBucketName}/temp/*
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: "*"
+
       Events:
         UploadCreated:
           Type: S3
@@ -72,4 +112,5 @@ Resources:
 
 Outputs:
   FunctionName:
+    Description: Part B auto-tag Lambda function name
     Value: !Ref AutoTagFromS3Function
