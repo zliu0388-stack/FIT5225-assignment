@@ -38,10 +38,7 @@ def handler(event, context):
             MaxLabels=20,
             MinConfidence=60
         )
-        tags_map = {
-            label['Name'].lower().replace(' ', '_'): 1
-            for label in resp.get('Labels', [])
-        }
+        tags_map = _extract_species_tags(resp.get('Labels', []))
 
         if not tags_map:
             return _resp(200, {
@@ -60,6 +57,38 @@ def handler(event, context):
     except Exception as e:
         print(f'Unexpected error: {e}')
         return _resp(500, {'message': 'Internal server error'})
+
+
+# Generic Rekognition labels that do NOT correspond to specific species
+# and would never match Part 2's custom species classifier output.
+_GENERIC_LABELS = {
+    'animal', 'mammal', 'wildlife', 'nature', 'outdoors', 'fauna',
+    'wild', 'wilderness', 'land', 'plant', 'tree', 'bush', 'forest',
+    'water', 'sky', 'photo', 'photography', 'image', 'reptile',
+    'vertebrate', 'creature', 'organism', 'carnivore', 'herbivore',
+    'insect', 'invertebrate', 'amphibian', 'marsupial', 'rodent',
+    'primate', 'canine', 'feline', 'bovine', 'bird', 'fish',
+    'terrestrial', 'arboreal', 'nocturnal', 'diurnal',
+}
+
+
+def _extract_species_tags(labels: list) -> dict:
+    """
+    Filter Rekognition labels to keep only specific species names that are
+    likely to match Part 2's custom species classifier output (lowercase,
+    spaces→underscores). Generic / category-level labels are excluded.
+    """
+    tags = {}
+    for label in labels:
+        name = label['Name'].lower().replace(' ', '_')
+        # Skip generic category labels
+        if name in _GENERIC_LABELS:
+            continue
+        # Skip very short names (usually generic)
+        if len(name) < 4:
+            continue
+        tags[name] = 1
+    return tags
 
 
 def _query_similar(tags_map: dict, auth_header: str) -> list:
