@@ -55,7 +55,6 @@ Globals:
     CodeUri: src/
     Environment:
       Variables:
-        AWS_REGION: !Ref AWS::Region
         UPLOAD_BUCKET: !Ref UploadBucketName
         UPLOAD_PREFIX: !Ref UploadPrefix
         THUMBNAIL_PREFIX: !Ref ThumbnailPrefix
