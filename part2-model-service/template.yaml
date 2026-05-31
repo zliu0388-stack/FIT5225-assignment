@@ -74,7 +74,7 @@ Resources:
   AutoTagFromS3Function:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: handlers/auto_tag_from_s3.handler
+      Handler: handlers.auto_tag_from_s3.handler
       Policies:
         - Statement:
             - Effect: Allow
