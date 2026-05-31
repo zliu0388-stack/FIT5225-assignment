@@ -97,18 +97,7 @@ Resources:
                 - logs:PutLogEvents
               Resource: "*"
 
-      Events:
-        UploadCreated:
-          Type: S3
-          Properties:
-            Bucket: !Ref UploadBucketName
-            Events:
-              - s3:ObjectCreated:*
-            Filter:
-              S3Key:
-                Rules:
-                  - Name: prefix
-                    Value: !Ref UploadPrefix
+
 
 Outputs:
   FunctionName:
