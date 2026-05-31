@@ -9,7 +9,6 @@ from utils.media_utils import (
     create_thumbnail,
     detect_media_type,
     read_s3_bytes,
-    extract_first_video_frame,
 )
 
 s3 = boto3.client("s3")
@@ -98,14 +97,16 @@ def handler(event, _context):
 
         for record in records:
             bucket = record["s3"]["bucket"]["name"]
-            key = urllib.parse.unquote_plus(record["s3"]["object"]["key"])
+            key = urllib.parse.unquote_plus(
+                record["s3"]["object"]["key"]
+            )
 
             print(f"Processing bucket={bucket}, key={key}")
 
             if not key.startswith(Settings.upload_prefix):
                 results.append({
                     "key": key,
-                    "status": "skipped_wrong_prefix"
+                    "status": "skipped_wrong_prefix",
                 })
                 continue
 
@@ -114,13 +115,16 @@ def handler(event, _context):
             if media_type == "unsupported":
                 results.append({
                     "key": key,
-                    "status": "skipped_unsupported_type"
+                    "status": "skipped_unsupported_type",
                 })
                 continue
 
             inferred = infer_tags_from_s3_object(bucket, key)
 
-            if _is_duplicate(bucket, inferred["checksum_sha256"]):
+            if _is_duplicate(
+                bucket,
+                inferred["checksum_sha256"],
+            ):
                 print(f"Duplicate file skipped: {key}")
 
                 results.append({
@@ -143,18 +147,9 @@ def handler(event, _context):
                 )
 
             elif media_type == "video":
-                print(f"Extracting first frame from video: {key}")
+                print(f"Video detected: {key}")
 
-                try:
-                    _, thumbnail_url = extract_first_video_frame(
-                        bucket=bucket,
-                        object_key=key,
-                    )
-
-                    print(f"Video frame extracted successfully: {thumbnail_url}")
-
-                except Exception as exc:
-                    print(f"Video extraction failed but Lambda continues: {exc}")
+                thumbnail_url = None
 
             inferred["thumbnail_url"] = thumbnail_url
 
@@ -166,22 +161,26 @@ def handler(event, _context):
                 inferred,
             )
 
-            results.append(
-                {
-                    "key": key,
-                    "media_type": media_type,
-                    "checksum_sha256": inferred["checksum_sha256"],
-                    "thumbnail_url": thumbnail_url,
-                    "tags_map": inferred["tags_map"],
-                    "upsert_ok": ok,
-                    "upsert_message": message,
-                }
-            )
+            results.append({
+                "key": key,
+                "media_type": media_type,
+                "checksum_sha256": inferred["checksum_sha256"],
+                "thumbnail_url": thumbnail_url,
+                "tags_map": inferred["tags_map"],
+                "upsert_ok": ok,
+                "upsert_message": message,
+            })
 
         print("PART2 FINISH")
         print(json.dumps(results))
 
-        return _json(200, {"message": "processed", "results": results})
+        return _json(
+            200,
+            {
+                "message": "processed",
+                "results": results,
+            },
+        )
 
     except Exception as exc:
         print(f"PART2 ERROR: {str(exc)}")
