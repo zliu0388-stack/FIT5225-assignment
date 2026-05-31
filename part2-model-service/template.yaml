@@ -13,7 +13,7 @@ Parameters:
 
   UploadPrefix:
     Type: String
-    Default: uploads/
+    Default: tagging/
 
   ThumbnailPrefix:
     Type: String
