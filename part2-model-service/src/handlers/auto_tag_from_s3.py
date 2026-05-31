@@ -132,8 +132,8 @@ def handler(event, _context):
 
             ok, message = _upsert_to_part3(inferred)
 
-            if ok:
-                _save_dedup_record(bucket, inferred["checksum_sha256"], inferred)
+
+            _save_dedup_record(bucket, inferred["checksum_sha256"], inferred)
 
             results.append(
                 {
