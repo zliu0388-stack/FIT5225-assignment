@@ -4,12 +4,24 @@ import os
 class Settings:
     aws_region = os.getenv("AWS_REGION", "ap-southeast-2")
 
-    part3_upsert_url = os.getenv("PART3_UPSERT_URL", "").strip()
+    upload_bucket = os.getenv("UPLOAD_BUCKET", "fit5225-team102-aussie-ecolens")
+    upload_prefix = os.getenv("UPLOAD_PREFIX", "uploads/")
+    thumbnail_prefix = os.getenv("THUMBNAIL_PREFIX", "thumbnails/")
+    temp_prefix = os.getenv("TEMP_PREFIX", "temp/")
+
+    part3_upsert_url = os.getenv(
+        "PART3_UPSERT_URL",
+        "https://5jo3ferouh.execute-api.ap-southeast-2.amazonaws.com/prod/data/media",
+    ).strip()
     part3_auth_token = os.getenv("PART3_AUTH_TOKEN", "").strip()
 
-    model_bucket = os.getenv("MODEL_BUCKET", "").strip()
-    md_model_key = os.getenv("MD_MODEL_KEY", "models/mdv5a.pt")
-    species_model_key = os.getenv("SPECIES_MODEL_KEY", "models/model.pt")
-    labels_key = os.getenv("LABELS_KEY", "models/labels.txt")
+    model_bucket = os.getenv("MODEL_BUCKET", "fit5225-team102-aussie-ecolens").strip()
+    md_model_key = os.getenv("MD_MODEL_KEY", "models/mdv5a.pt").strip()
+    species_model_key = os.getenv("SPECIES_MODEL_KEY", "models/model.pt").strip()
+    labels_key = os.getenv("LABELS_KEY", "models/labels.txt").strip()
 
     min_detection_conf = float(os.getenv("MIN_DETECTION_CONF", "0.2"))
+    enable_model_inference = os.getenv("ENABLE_MODEL_INFERENCE", "false").lower() == "true"
+
+    model_name = os.getenv("MODEL_NAME", "wildlife-detector")
+    model_version = os.getenv("MODEL_VERSION", "v1")
