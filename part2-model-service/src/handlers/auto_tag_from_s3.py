@@ -30,8 +30,11 @@ def _is_duplicate(bucket: str, checksum: str) -> bool:
     try:
         s3.head_object(Bucket=bucket, Key=_dedup_key(checksum))
         return True
-    except Exception:
-        return False
+    except s3.exceptions.ClientError as exc:
+        code = exc.response.get("Error", {}).get("Code", "")
+        if code in ("404", "NoSuchKey", "NotFound"):
+            return False
+        raise
 
 
 def _save_dedup_record(bucket: str, checksum: str, item: dict):

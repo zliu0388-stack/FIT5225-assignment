@@ -52,10 +52,6 @@ def _clip_bbox(img_w: int, img_h: int, detection: Dict) -> tuple[int, int, int, 
     return left, top, right, bottom
 
 
-def _mock_tags() -> dict:
-    return {"koala": 1}
-
-
 def infer_tags_from_s3_object(bucket: str, key: str) -> Dict:
     media_type = detect_media_type(key)
     local_path = download_s3_object(bucket, key)
@@ -74,33 +70,35 @@ def infer_tags_from_s3_object(bucket: str, key: str) -> Dict:
         }
 
     if not Settings.enable_model_inference:
-        tags_map = _mock_tags()
-    else:
-        detector, classifier = _ensure_models()
+        raise RuntimeError(
+            "ENABLE_MODEL_INFERENCE is false. Real model inference is required for submission."
+        )
 
-        tags_counter = Counter()
-        image = Image.open(local_path).convert("RGB")
-        detections = detector.detect(local_path)
+    detector, classifier = _ensure_models()
 
-        for detection in detections:
-            left, top, right, bottom = _clip_bbox(image.width, image.height, detection)
+    tags_counter = Counter()
+    image = Image.open(local_path).convert("RGB")
+    detections = detector.detect(local_path)
 
-            if right <= left or bottom <= top:
-                continue
+    for detection in detections:
+        left, top, right, bottom = _clip_bbox(image.width, image.height, detection)
 
-            crop = image.crop((left, top, right, bottom))
-            crop_path = f"/tmp/{Path(key).stem}_crop.jpg"
-            crop.save(crop_path)
+        if right <= left or bottom <= top:
+            continue
 
-            species, confidence = classifier.classify(crop_path)
+        crop = image.crop((left, top, right, bottom))
+        crop_path = f"/tmp/{Path(key).stem}_crop.jpg"
+        crop.save(crop_path)
 
-            if confidence >= 0.1 and species != "unknown":
-                tags_counter[species] += 1
+        species, confidence = classifier.classify(crop_path)
 
-        tags_map = dict(tags_counter)
+        if confidence >= 0.1 and species != "unknown":
+            tags_counter[species] += 1
 
-        if not tags_map:
-            tags_map = {"wildlife": 1}
+    tags_map = dict(tags_counter)
+
+    if not tags_map:
+        tags_map = {"wildlife": 1}
 
     return {
         "bucket": bucket,

@@ -21,7 +21,7 @@ class Settings:
     labels_key = os.getenv("LABELS_KEY", "models/labels.txt").strip()
 
     min_detection_conf = float(os.getenv("MIN_DETECTION_CONF", "0.2"))
-    enable_model_inference = os.getenv("ENABLE_MODEL_INFERENCE", "false").lower() == "true"
+    enable_model_inference = os.getenv("ENABLE_MODEL_INFERENCE", "true").lower() == "true"
 
     model_name = os.getenv("MODEL_NAME", "wildlife-detector")
     model_version = os.getenv("MODEL_VERSION", "v1")

@@ -30,6 +30,7 @@ You can evolve model accuracy/performance later without changing external contra
 - `SPECIES_MODEL_KEY` (default: `models/model.pt`)
 - `LABELS_KEY` (default: `models/labels.txt`)
 - `MIN_DETECTION_CONF` (default: `0.2`)
+- `ENABLE_MODEL_INFERENCE` (default: `true`, should remain true for demo/submission)
 
 ## Local setup
 
@@ -39,8 +40,12 @@ Python 3.12 recommended.
 pip install -r requirements.txt
 ```
 
+For AWS SAM deployment, dependencies are resolved from `src/requirements.txt`
+because `CodeUri` points to `src/`.
+
 ## Notes
 
 - `model.pt` and `mdv5a.pt` are expected to be private assets; do not commit them.
 - Current implementation handles image files in the main path.
 - Video support can be added later by introducing frame extraction before inference.
+- If `ENABLE_MODEL_INFERENCE=false`, the service now fails fast to avoid accidental mock/demo data.

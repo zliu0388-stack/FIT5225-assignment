@@ -45,7 +45,7 @@ Parameters:
 
   EnableModelInference:
     Type: String
-    Default: "false"
+    Default: "true"
 
 Globals:
   Function:
@@ -76,19 +76,11 @@ Resources:
     Properties:
       Handler: handlers.auto_tag_from_s3.handler
       Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref UploadBucketName
+        - S3ReadPolicy:
+            BucketName: !Ref ModelBucket
         - Statement:
-            - Effect: Allow
-              Action:
-                - s3:GetObject
-              Resource:
-                - !Sub arn:aws:s3:::${UploadBucketName}/${UploadPrefix}*
-                - !Sub arn:aws:s3:::${ModelBucket}/*
-            - Effect: Allow
-              Action:
-                - s3:PutObject
-              Resource:
-                - !Sub arn:aws:s3:::${UploadBucketName}/thumbnails/*
-                - !Sub arn:aws:s3:::${UploadBucketName}/temp/*
             - Effect: Allow
               Action:
                 - logs:CreateLogGroup
