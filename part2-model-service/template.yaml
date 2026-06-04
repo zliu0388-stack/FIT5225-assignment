@@ -47,34 +47,36 @@ Parameters:
     Type: String
     Default: "true"
 
-Globals:
-  Function:
-    Runtime: python3.13
-    Timeout: 120
-    MemorySize: 1024
-    CodeUri: src/
-    Environment:
-      Variables:
-        UPLOAD_BUCKET: !Ref UploadBucketName
-        UPLOAD_PREFIX: !Ref UploadPrefix
-        THUMBNAIL_PREFIX: !Ref ThumbnailPrefix
-        TEMP_PREFIX: temp/
-        PART3_UPSERT_URL: !Ref Part3UpsertUrl
-        PART3_AUTH_TOKEN: !Ref Part3AuthToken
-        MODEL_BUCKET: !Ref ModelBucket
-        MD_MODEL_KEY: !Ref MdModelKey
-        SPECIES_MODEL_KEY: !Ref SpeciesModelKey
-        LABELS_KEY: !Ref LabelsKey
-        MIN_DETECTION_CONF: "0.2"
-        ENABLE_MODEL_INFERENCE: !Ref EnableModelInference
-        MODEL_NAME: wildlife-detector
-        MODEL_VERSION: v1
-
 Resources:
   AutoTagFromS3Function:
     Type: AWS::Serverless::Function
+    Metadata:
+      DockerTag: part2-autotag
+      DockerContext: .
+      Dockerfile: Dockerfile
     Properties:
-      Handler: handlers.auto_tag_from_s3.handler
+      PackageType: Image
+      Timeout: 300
+      MemorySize: 3008
+      Environment:
+        Variables:
+          UPLOAD_BUCKET: !Ref UploadBucketName
+          UPLOAD_PREFIX: !Ref UploadPrefix
+          THUMBNAIL_PREFIX: !Ref ThumbnailPrefix
+          TEMP_PREFIX: temp/
+          PART3_UPSERT_URL: !Ref Part3UpsertUrl
+          PART3_AUTH_TOKEN: !Ref Part3AuthToken
+          MODEL_BUCKET: !Ref ModelBucket
+          MD_MODEL_KEY: !Ref MdModelKey
+          SPECIES_MODEL_KEY: !Ref SpeciesModelKey
+          LABELS_KEY: !Ref LabelsKey
+          MIN_DETECTION_CONF: "0.2"
+          ENABLE_MODEL_INFERENCE: !Ref EnableModelInference
+          MODEL_NAME: wildlife-detector
+          MODEL_VERSION: v1
+          FFMPEG_PATH: /opt/bin/ffmpeg
+          VIDEO_FPS: "1"
+          VIDEO_MAX_FRAMES: "5"
       Policies:
         - S3CrudPolicy:
             BucketName: !Ref UploadBucketName
@@ -87,8 +89,6 @@ Resources:
                 - logs:CreateLogStream
                 - logs:PutLogEvents
               Resource: "*"
-
-
 
 Outputs:
   FunctionName:

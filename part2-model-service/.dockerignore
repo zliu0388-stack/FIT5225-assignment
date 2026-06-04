@@ -1,0 +1,6 @@
+.aws-sam
+.git
+__pycache__
+*.pyc
+.env
+*.md

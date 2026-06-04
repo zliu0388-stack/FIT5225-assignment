@@ -5,9 +5,10 @@ from typing import Dict
 from PIL import Image
 
 from config import Settings
-from utils.media_utils import (
+from app_utils.media_utils import (
     detect_media_type,
     download_s3_object,
+    extract_video_frames,
     make_s3_url,
     sha256_file,
 )
@@ -52,33 +53,12 @@ def _clip_bbox(img_w: int, img_h: int, detection: Dict) -> tuple[int, int, int, 
     return left, top, right, bottom
 
 
-def infer_tags_from_s3_object(bucket: str, key: str) -> Dict:
-    media_type = detect_media_type(key)
-    local_path = download_s3_object(bucket, key)
-    checksum = sha256_file(local_path)
-
-    if media_type != "image":
-        return {
-            "bucket": bucket,
-            "object_key": key,
-            "media_type": media_type,
-            "checksum_sha256": checksum,
-            "tags_map": {"video": 1},
-            "model_name": Settings.model_name,
-            "model_version": Settings.model_version,
-            "file_url": make_s3_url(bucket, key),
-        }
-
-    if not Settings.enable_model_inference:
-        raise RuntimeError(
-            "ENABLE_MODEL_INFERENCE is false. Real model inference is required for submission."
-        )
-
+def _infer_tags_on_image_path(image_path: str, stem: str) -> Counter:
     detector, classifier = _ensure_models()
-
     tags_counter = Counter()
-    image = Image.open(local_path).convert("RGB")
-    detections = detector.detect(local_path)
+
+    image = Image.open(image_path).convert("RGB")
+    detections = detector.detect(image_path)
 
     for detection in detections:
         left, top, right, bottom = _clip_bbox(image.width, image.height, detection)
@@ -87,7 +67,7 @@ def infer_tags_from_s3_object(bucket: str, key: str) -> Dict:
             continue
 
         crop = image.crop((left, top, right, bottom))
-        crop_path = f"/tmp/{Path(key).stem}_crop.jpg"
+        crop_path = f"/tmp/{stem}_crop.jpg"
         crop.save(crop_path)
 
         species, confidence = classifier.classify(crop_path)
@@ -95,18 +75,47 @@ def infer_tags_from_s3_object(bucket: str, key: str) -> Dict:
         if confidence >= 0.1 and species != "unknown":
             tags_counter[species] += 1
 
-    tags_map = dict(tags_counter)
+    return tags_counter
 
-    if not tags_map:
-        tags_map = {"wildlife": 1}
 
-    return {
+def infer_tags_from_s3_object(bucket: str, key: str) -> Dict:
+    media_type = detect_media_type(key)
+    local_path = download_s3_object(bucket, key)
+    checksum = sha256_file(local_path)
+
+    if not Settings.enable_model_inference:
+        raise RuntimeError(
+            "ENABLE_MODEL_INFERENCE is false. Real model inference is required for submission."
+        )
+
+    tags_counter = Counter()
+    stem = Path(key).stem.replace("/", "_")
+
+    thumbnail_frame_bytes = None
+
+    if media_type == "image":
+        tags_counter.update(_infer_tags_on_image_path(local_path, stem))
+    elif media_type == "video":
+        frame_paths = extract_video_frames(local_path)
+        for idx, frame_path in enumerate(frame_paths):
+            tags_counter.update(_infer_tags_on_image_path(frame_path, f"{stem}_f{idx}"))
+        with open(frame_paths[0], "rb") as frame_file:
+            thumbnail_frame_bytes = frame_file.read()
+    else:
+        raise ValueError(f"unsupported media type for inference: {media_type}")
+
+    result = {
         "bucket": bucket,
         "object_key": key,
         "media_type": media_type,
         "checksum_sha256": checksum,
-        "tags_map": tags_map,
+        "tags_map": dict(tags_counter) or {"wildlife": 1},
         "model_name": Settings.model_name,
         "model_version": Settings.model_version,
         "file_url": make_s3_url(bucket, key),
     }
+
+    if thumbnail_frame_bytes is not None:
+        result["thumbnail_frame_bytes"] = thumbnail_frame_bytes
+
+    return result

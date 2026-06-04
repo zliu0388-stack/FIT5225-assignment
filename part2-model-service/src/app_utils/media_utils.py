@@ -1,5 +1,6 @@
 import hashlib
 import io
+import subprocess
 import tempfile
 from pathlib import Path
 
@@ -80,3 +81,54 @@ def create_thumbnail(bucket: str, object_key: str, image_bytes: bytes) -> tuple[
     )
 
     return thumbnail_key, make_s3_url(bucket, thumbnail_key)
+
+
+def ffmpeg_version() -> str:
+    try:
+        result = subprocess.run(
+            [Settings.ffmpeg_path, "-version"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=10,
+        )
+        return (result.stdout or result.stderr or "").splitlines()[0]
+    except Exception as exc:
+        return f"ffmpeg unavailable: {exc}"
+
+
+def extract_video_frames(
+    video_path: str,
+    fps: int | None = None,
+    max_frames: int | None = None,
+) -> list[str]:
+    fps = fps if fps is not None else Settings.video_fps
+    max_frames = max_frames if max_frames is not None else Settings.video_max_frames
+
+    out_dir = tempfile.mkdtemp(prefix="frames_")
+    output_pattern = str(Path(out_dir) / "frame_%03d.jpg")
+
+    cmd = [
+        Settings.ffmpeg_path,
+        "-i",
+        video_path,
+        "-vf",
+        f"fps={fps}",
+        "-frames:v",
+        str(max_frames),
+        "-q:v",
+        "2",
+        output_pattern,
+    ]
+
+    result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"ffmpeg failed ({result.returncode}): {(result.stderr or '')[:500]}"
+        )
+
+    frames = sorted(str(p) for p in Path(out_dir).glob("frame_*.jpg"))
+    if not frames:
+        raise RuntimeError("ffmpeg produced no frames")
+
+    return frames

@@ -25,3 +25,7 @@ class Settings:
 
     model_name = os.getenv("MODEL_NAME", "wildlife-detector")
     model_version = os.getenv("MODEL_VERSION", "v1")
+
+    ffmpeg_path = os.getenv("FFMPEG_PATH", "/opt/bin/ffmpeg").strip()
+    video_fps = int(os.getenv("VIDEO_FPS", "1"))
+    video_max_frames = int(os.getenv("VIDEO_MAX_FRAMES", "5"))

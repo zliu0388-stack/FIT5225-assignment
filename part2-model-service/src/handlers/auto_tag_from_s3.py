@@ -5,9 +5,10 @@ import requests
 
 from config import Settings
 from inference.pipeline import infer_tags_from_s3_object
-from utils.media_utils import (
+from app_utils.media_utils import (
     create_thumbnail,
     detect_media_type,
+    ffmpeg_version,
     read_s3_bytes,
 )
 
@@ -88,6 +89,7 @@ def _upsert_to_part3(item: dict) -> tuple[bool, str]:
 
 def handler(event, _context):
     print("PART2 START")
+    print(f"ffmpeg: {ffmpeg_version()}")
     print(json.dumps(event))
 
     try:
@@ -151,8 +153,19 @@ def handler(event, _context):
 
             elif media_type == "video":
                 print(f"Video detected: {key}")
-
-                thumbnail_url = None
+                frame_bytes = inferred.pop("thumbnail_frame_bytes", None)
+                if frame_bytes:
+                    try:
+                        _, thumbnail_url = create_thumbnail(
+                            bucket=bucket,
+                            object_key=key,
+                            image_bytes=frame_bytes,
+                        )
+                    except Exception as thumb_exc:
+                        print(f"video thumbnail skipped: {thumb_exc}")
+                        thumbnail_url = None
+                else:
+                    thumbnail_url = None
 
             inferred["thumbnail_url"] = thumbnail_url
 

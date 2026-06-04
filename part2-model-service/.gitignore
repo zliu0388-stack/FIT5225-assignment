@@ -2,3 +2,5 @@
 mg_detections.json
 cropped_images/
 __pycache__/
+.aws-sam/
+.env
