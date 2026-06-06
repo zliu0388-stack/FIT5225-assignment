@@ -7,10 +7,12 @@ import boto3
 
 s3 = boto3.client("s3")
 lambda_client = boto3.client("lambda")
+dynamodb = boto3.resource("dynamodb")
 
 PART2_FUNCTION_NAME = os.environ.get("PART2_FUNCTION_NAME")
 UPLOAD_BUCKET = os.environ.get("UPLOAD_BUCKET", "fit5225-team102-aussie-ecolens")
 UPLOAD_PREFIX = os.environ.get("UPLOAD_PREFIX", "uploads/")
+MEDIA_TABLE = os.environ.get("MEDIA_TABLE", "fit5225-team102-media-files")
 AWS_REGION = os.environ.get("AWS_REGION", "ap-southeast-2")
 PRESIGN_EXPIRY = int(os.environ.get("PRESIGN_EXPIRY", "300"))
 
@@ -51,6 +53,22 @@ def _guess_content_type(filename, media_type):
     return "video/mp4" if media_type == "video" else "application/octet-stream"
 
 
+def _active_media_exists_for_checksum(checksum: str) -> bool:
+    if not checksum:
+        return False
+    table = dynamodb.Table(MEDIA_TABLE)
+    resp = table.query(
+        IndexName="GSI1_checksum",
+        KeyConditionExpression="checksum_sha256 = :c",
+        ExpressionAttributeValues={":c": checksum},
+        Limit=10,
+    )
+    for item in resp.get("Items", []):
+        if item.get("status") != "DELETED":
+            return True
+    return False
+
+
 def handle_presign(event):
     """Return a presigned S3 PUT URL so the browser uploads the file directly to
     S3, bypassing the API Gateway / Lambda payload limits (supports large files
@@ -67,7 +85,7 @@ def handle_presign(event):
     if not filename:
         return _resp(400, {"message": "filename is required"})
 
-    # Deduplication: Part 2 writes dedup/{checksum}.json after processing a file.
+    # Deduplication: S3 marker and/or an active Part3 record with the same checksum.
     if checksum:
         dedup_key = f"dedup/{checksum}.json"
         try:
@@ -77,6 +95,8 @@ def handle_presign(event):
             code = exc.response.get("Error", {}).get("Code", "")
             if code not in ("404", "NoSuchKey", "NotFound"):
                 raise
+        if _active_media_exists_for_checksum(checksum):
+            return _resp(409, {"message": "Duplicate file detected"})
 
     object_key = f"{UPLOAD_PREFIX}{filename}"
     content_type = _guess_content_type(filename, media_type)

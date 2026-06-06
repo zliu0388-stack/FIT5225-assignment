@@ -20,9 +20,39 @@ class DataStore:
         self.thumb_lookup_table = resource.Table(Settings.thumb_lookup_table)
         self.s3 = boto3.client("s3", region_name=Settings.aws_region)
 
+    def get_media_by_checksum(self, checksum: str) -> Optional[Dict]:
+        if not checksum:
+            return None
+        resp = self.media_table.query(
+            IndexName="GSI1_checksum",
+            KeyConditionExpression=Key("checksum_sha256").eq(checksum),
+        )
+        for item in resp.get("Items", []):
+            if item.get("status") != "DELETED":
+                return item
+        return None
+
     def upsert_media(self, item: Dict) -> Dict:
-        media_id = item.get("media_id") or str(uuid.uuid4())
-        created_at = item.get("created_at") or _now_iso()
+        checksum = item.get("checksum_sha256")
+        existing = self.get_media_by_checksum(checksum) if checksum else None
+
+        if existing:
+            media_id = existing["media_id"]
+            created_at = existing["created_at"]
+            tags_version = int(existing.get("tags_version", 1)) + 1
+            for tag in (existing.get("tags_map") or {}).keys():
+                self.tag_index_table.delete_item(
+                    Key={"tag": tag, "media_id": media_id}
+                )
+            old_thumb = existing.get("thumbnail_url")
+            new_thumb = item.get("thumbnail_url")
+            if old_thumb and old_thumb != new_thumb:
+                self.thumb_lookup_table.delete_item(Key={"thumbnail_url": old_thumb})
+        else:
+            media_id = item.get("media_id") or str(uuid.uuid4())
+            created_at = item.get("created_at") or _now_iso()
+            tags_version = int(item.get("tags_version", 1))
+
         updated_at = _now_iso()
         tags_map = {
             str(k).strip().lower(): int(v)
@@ -41,7 +71,7 @@ class DataStore:
             "media_type": item["media_type"],
             "checksum_sha256": item["checksum_sha256"],
             "tags_map": tags_map,
-            "tags_version": int(item.get("tags_version", 1)),
+            "tags_version": tags_version,
             "model_name": item.get("model_name", "unknown-model"),
             "model_version": item.get("model_version", "unknown"),
             "status": item.get("status", "ACTIVE"),
@@ -110,11 +140,16 @@ class DataStore:
             return []
 
         results = []
+        seen_urls = set()
         for media_id in matched_ids:
             resp = self.media_table.get_item(Key={"media_id": media_id})
             item = resp.get("Item")
             if not item or item.get("status") == "DELETED":
                 continue
+            file_url = item.get("file_url")
+            if file_url in seen_urls:
+                continue
+            seen_urls.add(file_url)
             results.append(
                 {
                     "media_id": media_id,
@@ -215,6 +250,15 @@ class DataStore:
                 except Exception:
                     pass
                 self.thumb_lookup_table.delete_item(Key={"thumbnail_url": thumb_url})
+
+            checksum = item.get("checksum_sha256")
+            if checksum:
+                try:
+                    self.s3.delete_object(
+                        Bucket=item["bucket"], Key=f"dedup/{checksum}.json"
+                    )
+                except Exception:
+                    pass
 
             for tag in (item.get("tags_map") or {}).keys():
                 self.tag_index_table.delete_item(Key={"tag": tag, "media_id": media_id})
