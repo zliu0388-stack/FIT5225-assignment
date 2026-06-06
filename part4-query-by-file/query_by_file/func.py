@@ -35,6 +35,71 @@ _GENERIC_LABELS = {
 }
 
 
+# Mapping from OCI Vision common English labels to the species epithet tags
+# stored in the database by Part 2's wildlife ML model.
+# Part 2 uses the 6th column of labels.txt (species epithet, lowercase+underscore).
+# OCI Vision returns generic English object names, so we translate them here.
+_OCI_TO_DB_TAG = {
+    # Canis familiaris → 'familiaris' (dingo in the wildlife model)
+    'dog':              'familiaris',
+    'dingo':            'familiaris',
+    # Felis catus → 'catus'
+    'cat':              'catus',
+    # Bos taurus → 'taurus'
+    'cow':              'taurus',
+    'cattle':           'taurus',
+    'bull':             'taurus',
+    'calf':             'taurus',
+    # Sus scrofa → 'scrofa'
+    'pig':              'scrofa',
+    'boar':             'scrofa',
+    'wild_boar':        'scrofa',
+    'swine':            'scrofa',
+    # Casuarius casuarius → 'casuarius'
+    'cassowary':        'casuarius',
+    # Alectura lathami → 'lathami'
+    'turkey':           'lathami',
+    'brush_turkey':     'lathami',
+    'brushturkey':      'lathami',
+    # Hypsiprymnodon moschatus → 'moschatus'
+    'rat_kangaroo':     'moschatus',
+    'musky_rat_kangaroo': 'moschatus',
+    # Thylogale stigmatica → 'stigmatica'
+    'pademelon':        'stigmatica',
+    'red-legged_pademelon': 'stigmatica',
+    # Perameles nasuta → 'nasuta'
+    'bandicoot':        'nasuta',
+    'long-nosed_bandicoot': 'nasuta',
+    # Uromys caudimaculatus → 'caudimaculatus'
+    'white-tailed_rat': 'caudimaculatus',
+    'giant_rat':        'caudimaculatus',
+    # Heteromyias cinereifrons → 'cinereifrons'
+    'robin':            'cinereifrons',
+    'grey-headed_robin': 'cinereifrons',
+    # Megapodius reinwardt → 'reinwardt'
+    'scrubfowl':        'reinwardt',
+    'orange-footed_scrubfowl': 'reinwardt',
+    # Orthonyx spaldingii → 'spaldingii'
+    'chowchilla':       'spaldingii',
+    # Macropus giganteus → 'giganteus'
+    'kangaroo':         'giganteus',
+    'eastern_gray_kangaroo': 'giganteus',
+    # Vombatus ursinus → 'ursinus'
+    'wombat':           'ursinus',
+    # Trichosurus vulpecula → 'vulpecula'
+    'possum':           'vulpecula',
+    'brushtail':        'vulpecula',
+    # Dacelo novaeguineae → 'novaeguineae'
+    'kookaburra':       'novaeguineae',
+    # Vulpes vulpes → 'vulpes'
+    'fox':              'vulpes',
+    # Oryctolagus cuniculus → 'cuniculus'
+    'rabbit':           'cuniculus',
+    # Tachyglossus aculeatus → 'aculeatus'
+    'echidna':          'aculeatus',
+}
+
+
 _CORS_HEADERS = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -145,8 +210,12 @@ def _detect_tags_oci(file_bytes: bytes) -> dict:
         tags = {}
         for obj in response.data.detected_objects:
             name = obj.name.lower().replace(' ', '_')
-            if name not in _GENERIC_LABELS and len(name) >= 4:
-                tags[name] = tags.get(name, 0) + 1
+            if name in _GENERIC_LABELS or len(name) < 4:
+                continue
+            # Translate OCI Vision common name to the species epithet tag
+            # used by Part 2's wildlife ML model in the database.
+            db_tag = _OCI_TO_DB_TAG.get(name, name)
+            tags[db_tag] = tags.get(db_tag, 0) + 1
 
         return tags
 
