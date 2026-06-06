@@ -27,10 +27,16 @@ class DataStore:
             IndexName="GSI1_checksum",
             KeyConditionExpression=Key("checksum_sha256").eq(checksum),
         )
+        active = None
+        deleted = None
         for item in resp.get("Items", []):
-            if item.get("status") != "DELETED":
-                return item
-        return None
+            if item.get("status") == "DELETED":
+                deleted = deleted or item
+            else:
+                active = item
+                break
+        # Prefer ACTIVE; fall back to DELETED so re-upload can reactivate the record.
+        return active or deleted
 
     def upsert_media(self, item: Dict) -> Dict:
         checksum = item.get("checksum_sha256")
@@ -74,7 +80,7 @@ class DataStore:
             "tags_version": tags_version,
             "model_name": item.get("model_name", "unknown-model"),
             "model_version": item.get("model_version", "unknown"),
-            "status": item.get("status", "ACTIVE"),
+            "status": "ACTIVE",
             "created_at": created_at,
             "updated_at": updated_at,
         }
@@ -272,3 +278,31 @@ class DataStore:
             deleted.append(file_url)
 
         return {"deleted": deleted, "not_found": not_found}
+
+    def rebuild_tag_index(self) -> int:
+        """Rebuild tag-index entries from all ACTIVE media records."""
+        resp = self.media_table.scan(
+            FilterExpression=Attr("status").eq("ACTIVE"),
+        )
+        rebuilt = 0
+        for item in resp.get("Items", []):
+            media_id = item["media_id"]
+            tags_map = item.get("tags_map") or {}
+            updated_at = item.get("updated_at") or _now_iso()
+            for tag, count in tags_map.items():
+                n_tag = str(tag).strip().lower()
+                if not n_tag or int(count) <= 0:
+                    continue
+                self.tag_index_table.put_item(
+                    Item={
+                        "tag": n_tag,
+                        "media_id": media_id,
+                        "count": int(count),
+                        "media_type": item.get("media_type", "image"),
+                        "file_url": item.get("file_url", ""),
+                        "thumbnail_url": item.get("thumbnail_url"),
+                        "updated_at": updated_at,
+                    }
+                )
+                rebuilt += 1
+        return rebuilt

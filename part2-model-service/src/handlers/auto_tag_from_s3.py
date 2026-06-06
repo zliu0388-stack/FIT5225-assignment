@@ -126,19 +126,10 @@ def handler(event, _context):
 
             inferred = infer_tags_from_s3_object(bucket, key)
 
-            if _is_duplicate(
-                bucket,
-                inferred["checksum_sha256"],
-            ):
-                print(f"Duplicate file skipped: {key}")
-
-                results.append({
-                    "key": key,
-                    "status": "duplicate_skipped",
-                    "checksum_sha256": inferred["checksum_sha256"],
-                })
-
-                continue
+            if _is_duplicate(bucket, inferred["checksum_sha256"]):
+                print(
+                    f"dedup marker exists for {key}, still upserting to Part3"
+                )
 
             thumbnail_url = None
 
