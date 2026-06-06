@@ -29,11 +29,19 @@ def handler(event, context):
             # Notify for all tags on a newly uploaded file
             added_tags = set((new_image.get('tags_map') or {}).keys())
         else:
-            # Notify only for tags that were not in the old version
-            old_image = _deserialize(record['dynamodb'].get('OldImage', {}))
-            old_tags  = set((old_image.get('tags_map') or {}).keys())
-            new_tags  = set((new_image.get('tags_map') or {}).keys())
-            added_tags = new_tags - old_tags
+            # Notify only for tags that were not in the old version.
+            # Special case: if status changed DELETED → ACTIVE (re-upload of a
+            # previously deleted file), treat all current tags as new so that
+            # subscribers receive a notification just like a fresh upload.
+            old_image  = _deserialize(record['dynamodb'].get('OldImage', {}))
+            old_status = old_image.get('status', 'ACTIVE')
+            new_status = new_image.get('status', 'ACTIVE')
+            new_tags   = set((new_image.get('tags_map') or {}).keys())
+            if old_status == 'DELETED' and new_status == 'ACTIVE':
+                added_tags = new_tags
+            else:
+                old_tags   = set((old_image.get('tags_map') or {}).keys())
+                added_tags = new_tags - old_tags
 
         if not added_tags:
             continue
