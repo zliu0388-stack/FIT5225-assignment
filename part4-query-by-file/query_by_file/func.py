@@ -210,7 +210,7 @@ def _detect_tags_oci(file_bytes: bytes) -> dict:
         tags = {}
         for obj in response.data.detected_objects:
             name = obj.name.lower().replace(' ', '_')
-            if name in _GENERIC_LABELS or len(name) < 4:
+            if name in _GENERIC_LABELS or len(name) < 2:
                 continue
             # Translate OCI Vision common name to the species epithet tag
             # used by Part 2's wildlife ML model in the database.
