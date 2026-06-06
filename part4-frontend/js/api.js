@@ -52,16 +52,20 @@ async function _get(url, token) {
 
 // ── Part 1: File upload ───────────────────────────────────────────────────────
 
+// Two-step upload: ask Part 1 for a presigned S3 URL, then PUT the file straight
+// to S3. This bypasses the API Gateway / Lambda payload limits, so large images
+// and videos upload fine.
 async function uploadFile(file, checksum, token) {
-    const formData = new FormData();
-    formData.append('file',       file);
-    formData.append('checksum',   checksum);
-    formData.append('media_type', file.type.startsWith('video/') ? 'video' : 'image');
+    const media_type = file.type.startsWith('video/') ? 'video' : 'image';
 
+    // Step 1 — request a presigned upload URL (also runs the duplicate check)
     const resp = await fetch(`${CONFIG.part1ApiBase}/upload`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-        body: formData
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ filename: file.name, checksum, media_type })
     });
 
     let data;
@@ -79,7 +83,22 @@ async function uploadFile(file, checksum, token) {
         err.data   = data;
         throw err;
     }
-    return data;
+
+    // Step 2 — upload the file bytes directly to S3 via the presigned URL.
+    // The Content-Type must match the one the URL was signed with.
+    const putResp = await fetch(data.upload_url, {
+        method: 'PUT',
+        headers: { 'Content-Type': data.content_type || file.type || 'application/octet-stream' },
+        body: file
+    });
+
+    if (!putResp.ok) {
+        const err = new Error(`Storage upload failed (HTTP ${putResp.status})`);
+        err.status = putResp.status;
+        throw err;
+    }
+
+    return { file_url: data.file_url, object_key: data.object_key };
 }
 
 // ── Part 3: Query APIs ────────────────────────────────────────────────────────
