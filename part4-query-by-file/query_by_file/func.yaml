@@ -2,5 +2,5 @@ schema_version: 20180708
 name: query-by-file
 version: 0.0.1
 runtime: docker
-memory: 512
-timeout: 120
+memory: 1024
+timeout: 300
