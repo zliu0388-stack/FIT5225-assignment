@@ -11,6 +11,6 @@ const CONFIG = {
     // Part 4 - Notification service
     part4NotificationApiBase: 'https://4p3ce9lda8.execute-api.ap-southeast-2.amazonaws.com/prod',
 
-    // Part 4 - Query-by-file service
-    part4QueryApiBase: 'https://b069jpac09.execute-api.ap-southeast-2.amazonaws.com/prod'
+    // Part 4 - Query-by-file service (Oracle Cloud Functions + OCI Vision)
+    part4QueryApiBase: 'https://krv5zb6zpp5fbcbjryu2sqmo3y.apigateway.ap-melbourne-1.oci.customer-oci.com/v1'
 };
