@@ -15,3 +15,5 @@ Thumbs.db
 
 # SAM build artifacts
 .aws-sam/
+part4-query-by-file/query_by_file/model.pt
+part4-query-by-file/query_by_file/Dockerfile-fn-tmp*

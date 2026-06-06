@@ -106,12 +106,14 @@ def handler(ctx, data: io.BytesIO = None):
 
         file_bytes, _ = _extract_file(body, content_type)
         tags_map = _detect_tags_model(file_bytes)
+        debug_error = tags_map.pop('__error__', None)
 
         if not tags_map:
             result = {
                 'items': [],
                 'detected_tags': {},
                 'message': 'No species detected in the uploaded file.',
+                'debug_error': debug_error,
             }
             return fdk.response.Response(
                 ctx,
@@ -183,8 +185,9 @@ def _detect_tags_model(file_bytes: bytes) -> dict:
         return {species_tag: round(confidence, 3)}
 
     except Exception as exc:
-        print(f'Model inference error: {exc}')
-        return {}
+        import traceback
+        print(f'Model inference error: {traceback.format_exc()}')
+        return {'__error__': str(exc)[:300]}
 
 
 def _class_to_tag(class_name: str) -> str:
